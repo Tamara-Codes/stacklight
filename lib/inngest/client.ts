@@ -4,4 +4,4 @@
 // app/api/inngest/route.ts.
 import { Inngest } from "inngest";
 
-export const inngest = new Inngest({ id: "stack-digest" });
+export const inngest = new Inngest({ id: "stacklight" });

@@ -28,8 +28,8 @@ export function buildDigestEmail(input: {
   const reds = entries.filter((e) => e.severity === "red").length;
 
   const subject = reds
-    ? `Stack Digest — ${reds} red alert${reds > 1 ? "s" : ""} today`
-    : `Stack Digest — ${entries.length} update${entries.length === 1 ? "" : "s"} in your stack`;
+    ? `Stacklight —${reds} red alert${reds > 1 ? "s" : ""} today`
+    : `Stacklight —${entries.length} update${entries.length === 1 ? "" : "s"} in your stack`;
 
   const rows = entries
     .map(
@@ -45,7 +45,7 @@ export function buildDigestEmail(input: {
 
   const html = `
   <div style="font-family:ui-sans-serif,system-ui,sans-serif;max-width:560px;margin:0 auto;color:#111;">
-    <h1 style="font-size:20px;">Your stack digest</h1>
+    <h1 style="font-size:20px;">Your daily digest</h1>
     <table style="width:100%;border-collapse:collapse;">${rows}</table>
     <p style="color:#888;font-size:12px;margin-top:24px;border-top:1px solid #eee;padding-top:16px;">
       <a href="${input.manageUrl}" style="color:#888;">Manage your tools</a> ·

@@ -35,7 +35,7 @@ export default function SignIn() {
 
   return (
     <main className="container" style={{ paddingTop: 96, maxWidth: 420 }}>
-      <h1 style={{ fontSize: 28 }}>Sign in to Stack Digest</h1>
+      <h1 style={{ fontSize: 28 }}>Sign in to Stacklight</h1>
       {sent ? (
         <p style={{ color: "var(--muted)" }}>
           Check your inbox — we sent a magic link to <strong>{email}</strong>.

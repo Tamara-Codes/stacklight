@@ -1,5 +1,5 @@
 {
-  "name": "stack-digest",
+  "name": "stacklight",
   "version": "0.1.0",
   "private": true,
   "description": "Monitors your AI/dev stack and emails you the updates that matter, rated red/yellow/green.",

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Stack Digest monitors a developer's AI/dev tool stack (Anthropic, Vercel, Supabase, Clerk, OpenAI, Twilio…) and emails them a daily digest of updates, each rated red / yellow / green. Two paid plans: Solo (€7/mo, capped at 5 tools) and Founder (€19/mo, unlimited).
+Stacklight monitors a developer's AI/dev tool stack (Anthropic, Vercel, Supabase, Clerk, OpenAI, Twilio…) and emails them a daily digest of updates, each rated red / yellow / green. Two paid plans: Solo (€7/mo, capped at 5 tools) and Founder (€19/mo, unlimited).
 
 Next.js 15 (App Router) + React 19 on Vercel, Supabase Postgres, Inngest for background jobs, Gemini for rating, Resend for email, Stripe for billing.
 

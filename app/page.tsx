@@ -24,7 +24,7 @@ export default function Home() {
       <section className="container wide" style={{ padding: "88px 24px 40px" }}>
         <div className="hero-grid">
           <div>
-            <p className="eyebrow">Stack Digest</p>
+            <p className="eyebrow">Stacklight</p>
             <h1 style={{ fontSize: 44, lineHeight: 1.1, margin: "12px 0 16px" }}>
               Know what changed in your stack before it breaks prod.
             </h1>
@@ -118,7 +118,7 @@ export default function Home() {
               <p style={{ fontSize: 18, color: "var(--muted)", maxWidth: 680, margin: 0 }}>
                 The daily digest catches everything. But the second a{" "}
                 <strong style={{ color: "var(--text)", fontWeight: 600 }}>red-rated</strong>{" "}
-                update lands on one of your tools, Stack Digest pings your Slack so you
+                update lands on one of your tools, Stacklight pings your Slack so you
                 can act before it reaches production. Point it at any channel, or fire a
                 webhook into your own pipeline.
               </p>
@@ -166,7 +166,7 @@ export default function Home() {
         <div className="faq">
           <Faq
             q="Isn’t this just an RSS reader?"
-            a="An RSS reader hands you the firehose and makes you judge every item. Stack Digest reads it for you and rates each update by how badly it can bite you, so you act on the reds and ignore the rest."
+            a="An RSS reader hands you the firehose and makes you judge every item. Stacklight reads it for you and rates each update by how badly it can bite you, so you act on the reds and ignore the rest."
           />
           <Faq
             q="How fast are the Slack alerts?"
