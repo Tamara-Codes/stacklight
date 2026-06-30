@@ -1,0 +1,34 @@
+{
+  "name": "stack-digest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monitors your AI/dev stack and emails you the updates that matter, rated red/yellow/green.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:push": "psql \"$DATABASE_URL\" -f db/schema.sql",
+    "test:ingest": "tsx scripts/test-ingest.ts"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@react-email/components": "^0.0.25",
+    "@supabase/supabase-js": "^2.45.0",
+    "inngest": "^3.22.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "resend": "^4.0.0",
+    "rss-parser": "^3.13.0",
+    "stripe": "^17.0.0",
+    "ws": "^8.21.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
