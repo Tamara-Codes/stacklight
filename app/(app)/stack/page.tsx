@@ -1,10 +1,18 @@
 "use client";
 
-// The one settings page. Tap the tools you follow; each tap saves instantly.
-// No tier caps yet — pick as many as you like. RLS guarantees a user can only
-// touch their own rows even though this runs in the browser.
+// The vendor picker. Tap the tools you follow; each tap saves instantly.
+// Starter is capped at STARTER_LIMIT tools (enforced here, not in the DB — see
+// db/schema.sql). Full Stack ('pro') and the 14-day trial are unlimited: the
+// trial is the full product, and the size of the stack a user builds here is
+// exactly what makes the Starter-vs-Full-Stack choice obvious at checkout.
+// RLS guarantees a user can only touch their own rows even though this runs
+// in the browser.
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/db/supabase";
+import { useAuthedUserContext } from "@/lib/context/AuthedUserContext";
+
+const STARTER_LIMIT = 10;
 
 interface Vendor {
   id: number;
@@ -28,47 +36,38 @@ function iconUrl(slug: string) {
 }
 
 export default function StackPage() {
+  const router = useRouter();
+  const { userId, plan, trialActive } = useAuthedUserContext();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [done, setDone] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        location.href = "/sign-in";
-        return;
-      }
-      const uid = session.user.id;
-      setUserId(uid);
-
-      // Make sure a users row exists (mirrors the auth user).
-      await supabase.from("users").upsert(
-        { id: uid, email: session.user.email },
-        { onConflict: "id", ignoreDuplicates: true }
-      );
-
       const [{ data: vendorRows }, { data: stack }] = await Promise.all([
         supabase.from("vendors").select("id, slug, name").order("name"),
-        supabase.from("user_stacks").select("vendor_id").eq("user_id", uid),
+        supabase.from("user_stacks").select("vendor_id").eq("user_id", userId),
       ]);
 
       setVendors(vendorRows ?? []);
       setSelected(new Set((stack ?? []).map((r) => r.vendor_id)));
       setLoading(false);
     })();
-  }, []);
+  }, [userId]);
+
+  // Unlimited on Full Stack and during the trial; only Starter (and expired
+  // trials that never picked a plan) hit the cap.
+  const unlimited = plan === "pro" || trialActive;
+  const atLimit = !unlimited && selected.size >= STARTER_LIMIT;
 
   async function toggle(vendorId: number) {
-    if (!userId) return;
     const next = new Set(selected);
     if (next.has(vendorId)) {
       next.delete(vendorId);
       setSelected(next);
       await supabase.from("user_stacks").delete().match({ user_id: userId, vendor_id: vendorId });
     } else {
+      if (atLimit) return; // Starter is capped; the UI nudges to upgrade instead of toggling.
       next.add(vendorId);
       setSelected(next);
       await supabase.from("user_stacks").insert({ user_id: userId, vendor_id: vendorId });
@@ -77,30 +76,25 @@ export default function StackPage() {
 
   if (loading) return <main className="container" style={{ paddingTop: 96 }}>Loading…</main>;
 
-  if (done) {
-    return (
-      <main className="container" style={{ paddingTop: 110, paddingBottom: 120, textAlign: "center" }}>
-        <div className="done-check" aria-hidden>✓</div>
-        <h1 style={{ fontSize: 30, margin: "22px 0 0" }}>You&apos;re all set</h1>
-        <p style={{ color: "var(--muted)", maxWidth: 440, margin: "10px auto 24px" }}>
-          We&apos;re watching {selected.size} tool{selected.size === 1 ? "" : "s"} for you. Your first
-          digest lands tomorrow morning — reds first.
-        </p>
-        <button className="btn ghost" onClick={() => setDone(false)}>Edit your stack</button>
-      </main>
-    );
-  }
-
   return (
     <main className="container" style={{ paddingTop: 56, paddingBottom: 110, textAlign: "center" }}>
       <h1 style={{ fontSize: 30, margin: 0 }}>Build your stack</h1>
-      <p style={{ color: "var(--muted)", maxWidth: 460, margin: "10px auto 0" }}>
-        Tap the tools you use. We&apos;ll watch them and flag what matters.
-      </p>
 
       <div style={{ marginTop: 16 }}>
-        <span className="count-pill">{selected.size} selected</span>
+        <span className="count-pill">
+          {selected.size}{unlimited ? "" : ` / ${STARTER_LIMIT}`}
+        </span>
       </div>
+
+      {atLimit && (
+        <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 16, maxWidth: 360, marginLeft: "auto", marginRight: "auto", lineHeight: 1.5 }}>
+          {plan === "starter" ? (
+            <>Starter tracks up to {STARTER_LIMIT} tools. <a href="/account">Upgrade to Full Stack</a> for an unlimited stack.</>
+          ) : (
+            <>Your free trial has ended. <a href="/account">Pick a plan</a> to keep tracking your stack.</>
+          )}
+        </p>
+      )}
 
       <div className="bubble-cloud">
         {vendors.map((v, i) => (
@@ -108,6 +102,7 @@ export default function StackPage() {
             key={v.id}
             vendor={v}
             on={selected.has(v.id)}
+            disabled={atLimit && !selected.has(v.id)}
             // Stagger the bob so the cloud drifts rather than pulsing in unison.
             delay={(i % 8) * 0.45}
             duration={6 + (i % 4)}
@@ -117,8 +112,8 @@ export default function StackPage() {
       </div>
 
       <div style={{ marginTop: 40 }}>
-        <button className="btn lg" disabled={selected.size === 0} onClick={() => setDone(true)}>
-          Next
+        <button className="btn lg" disabled={selected.size === 0} onClick={() => router.push("/dashboard")}>
+          Done
         </button>
         {selected.size === 0 && (
           <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 10 }}>
@@ -131,10 +126,11 @@ export default function StackPage() {
 }
 
 function VendorBubble({
-  vendor, on, delay, duration, onToggle,
+  vendor, on, disabled, delay, duration, onToggle,
 }: {
   vendor: Vendor;
   on: boolean;
+  disabled?: boolean;
   delay: number;
   duration: number;
   onToggle: () => void;
@@ -147,7 +143,8 @@ function VendorBubble({
         type="button"
         className={`bubble${on ? " on" : ""}`}
         aria-pressed={on}
-        title={vendor.name}
+        title={disabled ? `Starter is capped at ${STARTER_LIMIT} tools` : vendor.name}
+        disabled={disabled}
         onClick={onToggle}
       >
         <span className="bubble-art">
