@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Stacklight monitors a developer's AI/dev tool stack (Anthropic, Vercel, Supabase, Clerk, OpenAI, Twilio…) and emails them a daily digest of updates, each rated red / yellow / green. Two paid plans: Solo (€7/mo, capped at 5 tools) and Founder (€19/mo, unlimited).
+Stacklight monitors a developer's AI/dev tool stack (Anthropic, Vercel, Supabase, Clerk, OpenAI, Twilio…) and emails them a daily digest of updates, each rated red / yellow / green. Two paid plans differing ONLY in stack size (features identical, incl. instant red alerts by email / Slack / Discord): Starter (€5/mo, up to 10 tools) and Full Stack (€10/mo, plan value 'pro', unlimited). No free tier — **signup itself starts a 14-day in-app trial** (`users.trial_ends_at`, everything unlocked, unlimited stack, no plan choice up front); Stripe only enters when the user picks a plan afterwards (card required, no Stripe-side trial). Server-side access = subscription OR live trial — always gate via `hasAccess` in `lib/plan.ts`, never by plan alone; the client counterpart is `trialActive` from `useAuthedUser`. Legacy plan values 'solo'/'free' map to none, 'founder' to pro (see `normalizePlan`).
 
-Next.js 15 (App Router) + React 19 on Vercel, Supabase Postgres, Inngest for background jobs, Gemini for rating, Resend for email, Stripe for billing.
+Next.js 15 (App Router) + React 19 on Vercel, Supabase Postgres, Inngest for background jobs, Gemini for rating, Resend for email, Stripe for billing, Composio for the Slack connection (OAuth + message sending).
 
 ## Commands
 
@@ -39,6 +39,7 @@ Jobs retry, so several things are deliberately idempotent:
 
 - `entries` has `unique (vendor_id, external_id)`; ingestion upserts with `ignoreDuplicates`, so re-polling a feed never duplicates.
 - `deliveries` has `unique (user_id, dedupe_key)` (e.g. `digest:2026-06-28`). `sendUserDigest` checks this before sending and records after. The digest **date is computed once in `dispatchDigests` and passed down** in the event — so a retry hours later reuses the same dedupe key. Keep it that way.
+- Red alerts dedupe the same way, **per channel**, with key `alert:<entry_id>:<channel>` (channel ∈ email/slack/discord) — both pollers may emit `alert/entry.red` for the same entry (that's expected), and the per-channel check in `sendUserRedAlert` stops a double ping while letting one channel retry without re-firing another that already sent.
 - Inngest memoizes successful `step.run` blocks, so a retry of a later step won't re-run the send.
 
 ## Auth & security model
@@ -51,15 +52,18 @@ Jobs retry, so several things are deliberately idempotent:
 - **API routes never trust a user id from the browser.** `/api/checkout` verifies the Supabase access token server-side via `supabaseAdmin.auth.getUser(token)`.
 - **Stripe webhook** (`/api/stripe/webhook`) verifies the signature against the raw request body — it's the source of truth for who has paid, updating `subscriptions.status` and `users.plan`.
 - **Unsubscribe** (`/api/unsubscribe`) must work without login, so the user id in the link is HMAC-signed (`lib/tokens.ts`); the route only acts if the signature verifies.
-- The **Solo 5-tool cap is enforced in app code** (`SOLO_LIMIT` in `app/stack/page.tsx`), not in the DB.
+- The **Starter 10-tool cap is enforced in app code** (`STARTER_LIMIT` in `app/(app)/stack/page.tsx`), not in the DB.
 
 ## Layout
 
 - `lib/feeds/sources.ts` — the vendor registry. **Adding a tool to monitor = adding an entry here**, not writing code. We pull official RSS/releases/status feeds; do NOT scrape HTML.
-- `lib/inngest/functions/` — `ingest.ts` (poll feeds + rate, cron 06:00) and `digest.ts` (`dispatchDigests` cron 08:00 + `sendUserDigest` per-user). All functions must be registered in `app/api/inngest/route.ts` (the Inngest serve handler).
+- `lib/inngest/functions/` — `ingest.ts` (poll feeds + rate, cron 06:00), `digest.ts` (`dispatchDigests` cron 08:00 + `sendUserDigest` per-user), and `alerts.ts` (`dispatchRedAlert` per fresh red entry + `sendUserRedAlert` per user — same fan-out shape as the digest). `sendUserRedAlert` loops the user's enabled channels (`alert_channels`) and sends to each with its own dedupe/steps. All functions must be registered in `app/api/inngest/route.ts` (the Inngest serve handler).
+- **Alert channels live in `alert_channels`** (one row per enabled channel, `kind` ∈ email/slack/discord; presence = on). email → `users.email`; slack → `target`=channel, `account_id`=Composio id; discord → `target`=incoming webhook URL. Select-only RLS; written only by `/api/slack` (slack) and `/api/alerts` (email/discord) via service-role.
+- `lib/slack/composio.ts` — the only place that talks to Composio (OAuth link, connection lookup/delete, `SLACK_SEND_MESSAGE`). Server-only; tokens live in Composio, we store just `(account_id, channel)` in `alert_channels` (kind='slack'). Use `connectedAccounts.link()`, not the retired `initiate()`.
+- `lib/discord/webhook.ts` — Discord red alerts via a user-supplied incoming webhook (`sendDiscordMessage`, `isDiscordWebhookUrl`). No OAuth, no Composio, no env key — the webhook URL is the credential, stored per-user in `alert_channels`.
 - `lib/ai/severity.ts` — Gemini rating. Model is the `MODEL` constant; uses a JSON response schema to force `{severity, why}`.
 - `lib/email/digest.ts` — pure `buildDigestEmail` (inline styles, reds sorted first); `lib/email/client.ts` — Resend wrapper.
-- `app/api/` — `checkout`, `stripe/webhook`, `unsubscribe`, `inngest` route handlers.
+- `app/api/` — `checkout`, `stripe/webhook`, `unsubscribe`, `inngest`, `slack` (connect/status/channel/disconnect; GET doubles as the OAuth callback by adopting the ACTIVE Composio connection), `alerts` (GET/PUT/DELETE for the email + Discord alert channels) route handlers.
 - `db/` — `schema.sql` (apply with `npm run db:push`), `seed-vendors.sql`. The `*-wonderpages*` file is unrelated leftover.
 - `@/*` path alias maps to the repo root (see `tsconfig.json`).
 
