@@ -2,44 +2,29 @@
 // entries, then rate the unrated ones with Gemini. Mirrors what the Inngest
 // ingest function does, but runnable standalone so we can see it work.
 // Run: set -a; . ./.env; set +a; npm run test:ingest
-import Parser from "rss-parser";
 import { VENDORS } from "../lib/feeds/sources";
-import { toEntryRow, type EntryRow } from "../lib/feeds/normalize";
 import { supabaseAdmin } from "../lib/db/admin";
+import { upsertVendor, syncVendorFeed } from "../lib/feeds/sync";
 import { rateEntry } from "../lib/ai/severity";
 
-const parser = new Parser();
 const dot = (s: string) =>
   s === "red" ? "🔴" : s === "yellow" ? "🟡" : s === "green" ? "🟢" : "⚫"; // ⚫ = skip (dropped from digest)
 
 async function main() {
   console.log("── Fetching feeds ──");
   for (const vendor of VENDORS) {
-    const { data: v, error: vErr } = await supabaseAdmin
-      .from("vendors")
-      .upsert({ slug: vendor.slug, name: vendor.name, homepage: vendor.homepage }, { onConflict: "slug" })
-      .select("id")
-      .single();
-    if (vErr || !v) {
-      console.log(`  ✗ ${vendor.name}: vendor upsert failed — ${vErr?.message}`);
+    let vendorId: number;
+    try {
+      vendorId = await upsertVendor(vendor);
+    } catch (e: any) {
+      console.log(`  ✗ ${vendor.name}: ${String(e.message).slice(0, 80)}`);
       continue;
     }
-    const vendorId = v.id as number;
 
     for (const feed of vendor.feeds) {
       try {
-        const parsed = await parser.parseURL(feed.url);
-        const rows = parsed.items
-          .slice(0, 10)
-          .map((item) => toEntryRow(vendorId, item))
-          .filter((r): r is EntryRow => r !== null);
-        if (rows.length) {
-          const { error } = await supabaseAdmin
-            .from("entries")
-            .upsert(rows, { onConflict: "vendor_id,external_id", ignoreDuplicates: true });
-          if (error) throw error;
-        }
-        console.log(`  ✓ ${vendor.name} (${feed.kind}): ${rows.length} items`);
+        const r = await syncVendorFeed(vendorId, feed, { maxItems: 10 });
+        console.log(`  ✓ ${vendor.name} (${feed.kind}): +${r.inserted} new, ~${r.updated} updated`);
       } catch (e: any) {
         console.log(`  ✗ ${vendor.name} (${feed.kind}): ${String(e.message).slice(0, 80)}`);
       }

@@ -1,67 +1,57 @@
-// Content pipeline: poll every vendor feed, store new updates (idempotently),
-// then rate any unrated ones with Gemini. Runs on a schedule. This is the
+// Content pipeline: poll every vendor feed, store new/changed updates, then
+// rate any unrated ones with Gemini. Runs on a schedule. This is the
 // "expensive" work that happens ONCE per update, shared by every user.
-import Parser from "rss-parser";
+// (The frequent status poller in poll-status.ts covers timely reds; this daily
+// run covers everything, including changelog/release feeds.)
 import { inngest } from "@/lib/inngest/client";
-import { supabaseAdmin } from "@/lib/db/admin";
 import { VENDORS } from "@/lib/feeds/sources";
-import { toEntryRow, type EntryRow } from "@/lib/feeds/normalize";
-import { rateEntry } from "@/lib/ai/severity";
-
-const parser = new Parser();
+import { upsertVendor, syncVendorFeed, rateUnratedEntries } from "@/lib/feeds/sync";
 
 export const ingestFeeds = inngest.createFunction(
   { id: "ingest-feeds" },
-  { cron: "0 6 * * *" }, // 06:00 daily; the red-alert poller will be more frequent
+  { cron: "0 6 * * *" }, // 06:00 daily
   async ({ step }) => {
-    for (const vendor of VENDORS) {
-      // Ensure the vendor row exists and grab its id.
-      const vendorId = await step.run(`vendor-${vendor.slug}`, async () => {
-        const { data } = await supabaseAdmin
-          .from("vendors")
-          .upsert(
-            { slug: vendor.slug, name: vendor.name, homepage: vendor.homepage },
-            { onConflict: "slug" }
-          )
-          .select("id")
-          .single();
-        return data!.id as number;
-      });
+    const failures: string[] = [];
 
-      // Pull each feed and upsert entries. The (vendor_id, external_id) unique
-      // constraint makes re-polling the same feed a no-op — no duplicates.
+    for (const vendor of VENDORS) {
+      // Ensure the vendor row exists and grab its id. Vendors with no feeds
+      // yet still get a row (so they're pickable in the UI) and are done here.
+      const vendorId = await step.run(`vendor-${vendor.slug}`, () => upsertVendor(vendor));
+
+      // Pull each feed and reconcile entries (insert new, re-open changed —
+      // see lib/feeds/sync.ts). A broken feed is recorded and skipped rather
+      // than thrown: one vendor moving its feed URL must not burn this run's
+      // retries and starve every vendor after it in the loop.
       for (const feed of vendor.feeds) {
         await step.run(`fetch-${vendor.slug}-${feed.kind}`, async () => {
-          const parsed = await parser.parseURL(feed.url);
-          const rows = parsed.items
-            .map((item) => toEntryRow(vendorId, item))
-            .filter((r): r is EntryRow => r !== null);
-          if (rows.length) {
-            await supabaseAdmin
-              .from("entries")
-              .upsert(rows, { onConflict: "vendor_id,external_id", ignoreDuplicates: true });
+          try {
+            return await syncVendorFeed(vendorId, feed);
+          } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            failures.push(`${vendor.slug}/${feed.kind}: ${message.slice(0, 120)}`);
+            return { inserted: 0, updated: 0, failed: true };
           }
         });
       }
     }
 
-    // Rate everything not yet rated. (At real scale this becomes its own
-    // fanned-out step; inline is fine while volume is small.)
-    await step.run("rate-unrated", async () => {
-      const { data: unrated } = await supabaseAdmin
-        .from("entries")
-        .select("id, title, body, vendors(name)")
-        .is("severity", null)
-        .limit(100);
+    // Rate everything not yet rated, draining in batches (a big feed day used
+    // to silently backlog behind a 100-entry cap).
+    const rating = await step.run("rate-unrated", () => rateUnratedEntries(500));
 
-      for (const entry of unrated ?? []) {
-        const vendorName = (entry as any).vendors?.name ?? "Unknown";
-        const rating = await rateEntry({ vendor: vendorName, title: entry.title, body: entry.body });
-        await supabaseAdmin
-          .from("entries")
-          .update({ severity: rating.severity, why: rating.why })
-          .eq("id", entry.id);
-      }
-    });
+    // Reds found here too fan out as instant alerts — changelog/release feeds
+    // aren't covered by the status poller, and a breaking change is exactly
+    // what Pro users pay to hear about fast. The `alert:<entry_id>` dedupe in
+    // deliveries makes double-emitting with poll-status harmless.
+    if (rating.redIds.length) {
+      await step.sendEvent(
+        "alert-reds",
+        rating.redIds.map((entryId) => ({ name: "alert/entry.red" as const, data: { entryId } }))
+      );
+    }
+
+    // Surface failures in the run result so they're visible in the Inngest
+    // dashboard — a feed that fails every day needs its URL re-verified.
+    return { rated: rating.rated, reds: rating.redIds.length, failures };
   }
 );

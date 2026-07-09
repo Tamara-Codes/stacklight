@@ -13,6 +13,7 @@ import { supabaseAdmin } from "@/lib/db/admin";
 import { buildDigestEmail, type DigestEntry } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { unsubToken } from "@/lib/tokens";
+import { hasAccess } from "@/lib/plan";
 
 const BASE = process.env.PUBLIC_BASE_URL ?? "https://stackdigest.eu";
 
@@ -27,12 +28,12 @@ export const dispatchDigests = inngest.createFunction(
     const users = await step.run("eligible-users", async () => {
       // Paginate — Supabase caps a single response at ~1000 rows, and at 100k
       // users we can't pull them all at once.
-      const all: { id: string }[] = [];
+      const all: { id: string; plan: string; trial_ends_at: string | null }[] = [];
       const page = 1000;
       for (let from = 0; ; from += page) {
         const { data } = await supabaseAdmin
           .from("users")
-          .select("id")
+          .select("id, plan, trial_ends_at")
           .is("unsubscribed_at", null)
           .range(from, from + page - 1);
         if (!data?.length) break;
@@ -42,9 +43,14 @@ export const dispatchDigests = inngest.createFunction(
       return all;
     });
 
+    // Both plans get the same daily digest — they differ only in stack size —
+    // and so does the 14-day signup trial. Expired trials with no plan get
+    // nothing (see lib/plan.ts).
+    const eligible = users.filter(hasAccess);
+
     // Fan out: one event per user. Inngest queues and runs them with the
     // concurrency limit set on sendUserDigest below.
-    const events = users.map((u) => ({
+    const events = eligible.map((u) => ({
       name: "digest/user.requested" as const,
       data: { userId: u.id, date },
     }));
@@ -90,13 +96,23 @@ export const sendUserDigest = inngest.createFunction(
 
       const { data: entries } = await supabaseAdmin
         .from("entries")
-        .select("severity, why, title, url, vendors(name)")
+        .select("id, severity, why, title, url, vendors(name)")
         .in("vendor_id", vendorIds)
         .in("severity", ["red", "yellow", "green"]) // excludes unrated (null) AND "skip"
         .gte("published_at", since)
         .order("published_at", { ascending: false });
 
-      const digestEntries: DigestEntry[] = (entries ?? []).map((e: any) => ({
+      // supabase-js can't infer the vendors(name) join without generated DB types.
+      const rows = (entries ?? []) as unknown as {
+        id: number;
+        severity: DigestEntry["severity"];
+        why: string;
+        title: string;
+        url: string | null;
+        vendors: { name: string } | null;
+      }[];
+      const digestEntries: (DigestEntry & { id: number })[] = rows.map((e) => ({
+        id: e.id,
         severity: e.severity,
         why: e.why,
         title: e.title,
@@ -118,15 +134,25 @@ export const sendUserDigest = inngest.createFunction(
         entries: payload.entries,
         manageUrl: `${BASE}/stack`,
         unsubscribeUrl: `${BASE}/api/unsubscribe?u=${userId}&t=${token}`,
+        date,
       });
       await sendEmail({ to: payload.email, subject, html });
     });
 
-    // Record it (the idempotency log + audit trail).
+    // Record it (the idempotency log + audit trail) AND exactly which entries
+    // went into it, so Archive can show the literal digest later rather than
+    // reconstructing a guess from the user's (possibly since-changed) stack.
     await step.run("record", async () => {
-      await supabaseAdmin
+      const { data: delivery } = await supabaseAdmin
         .from("deliveries")
-        .insert({ user_id: userId, kind: "digest", dedupe_key: dedupeKey });
+        .insert({ user_id: userId, kind: "digest", dedupe_key: dedupeKey })
+        .select("id")
+        .single();
+      if (delivery) {
+        await supabaseAdmin.from("delivery_entries").insert(
+          payload.entries.map((e) => ({ delivery_id: delivery.id, entry_id: e.id }))
+        );
+      }
     });
 
     return { sent: true };

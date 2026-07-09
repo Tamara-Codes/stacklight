@@ -15,6 +15,10 @@
 //
 // Every URL below was verified against the live parser. When adding a vendor,
 // test the feed the same way before committing it — vendors move these.
+//
+// Vendors with `feeds: []` are UI-only for now: they show up as selectable
+// bubbles (ingest upserts the vendor row) but nothing is polled or rated until
+// a verified feed is added.
 
 export type FeedKind = "rss" | "status" | "releases";
 
@@ -42,19 +46,137 @@ export const VENDORS: VendorDef[] = [
     slug: "openai",
     name: "OpenAI",
     homepage: "https://openai.com",
-    feeds: [{ kind: "status", url: "https://status.openai.com/history.atom" }],
+    feeds: [
+      { kind: "status", url: "https://status.openai.com/history.atom" },
+      // News feed carries model/product announcements; the rater's "skip"
+      // rule filters out the pure-marketing posts.
+      { kind: "rss", url: "https://openai.com/news/rss.xml" },
+    ],
   },
   {
     slug: "google-cloud",
     name: "Google Cloud (Gemini / Vertex)",
     homepage: "https://cloud.google.com",
-    feeds: [{ kind: "status", url: "https://status.cloud.google.com/en/feed.atom" }],
+    feeds: [
+      { kind: "status", url: "https://status.cloud.google.com/en/feed.atom" },
+      { kind: "rss", url: "https://cloud.google.com/feeds/vertex-ai-release-notes.xml" },
+    ],
   },
   {
     slug: "perplexity",
     name: "Perplexity",
     homepage: "https://www.perplexity.ai",
     feeds: [{ kind: "status", url: "https://status.perplexity.com/history.atom" }],
+  },
+  {
+    slug: "groq",
+    name: "Groq",
+    homepage: "https://groq.com",
+    feeds: [{ kind: "status", url: "https://groqstatus.com/history.atom" }],
+  },
+  {
+    slug: "xai",
+    name: "xAI",
+    homepage: "https://x.ai",
+    // status.x.ai sits behind Cloudflare bot-blocking (403 even with a browser
+    // UA) — a feed here would fail in production too. Firecrawl candidate.
+    feeds: [],
+  },
+  {
+    slug: "openrouter",
+    name: "OpenRouter",
+    homepage: "https://openrouter.ai",
+    // No feed on status.openrouter.ai or openrouter.ai/changelog. Firecrawl candidate.
+    feeds: [],
+  },
+
+  // ===== AI agent tooling =====
+  {
+    slug: "langchain",
+    name: "LangChain",
+    homepage: "https://www.langchain.com",
+    // Monorepo releases cover all langchain-* packages.
+    feeds: [{ kind: "releases", url: "https://github.com/langchain-ai/langchain/releases.atom" }],
+  },
+  {
+    slug: "langgraph",
+    name: "LangGraph",
+    homepage: "https://www.langchain.com/langgraph",
+    feeds: [{ kind: "releases", url: "https://github.com/langchain-ai/langgraph/releases.atom" }],
+  },
+  {
+    slug: "langsmith",
+    name: "LangSmith",
+    homepage: "https://smith.langchain.com",
+    feeds: [{ kind: "status", url: "https://status.smith.langchain.com/history.atom" }],
+  },
+  {
+    slug: "composio",
+    name: "Composio",
+    homepage: "https://composio.dev",
+    feeds: [{ kind: "status", url: "https://status.composio.dev/history.atom" }],
+  },
+  {
+    slug: "e2b",
+    name: "E2B",
+    homepage: "https://e2b.dev",
+    feeds: [{ kind: "status", url: "https://status.e2b.dev/history.atom" }],
+  },
+  {
+    slug: "browseruse",
+    name: "Browser Use",
+    homepage: "https://browser-use.com",
+    feeds: [{ kind: "releases", url: "https://github.com/browser-use/browser-use/releases.atom" }],
+  },
+  {
+    slug: "firecrawl",
+    name: "Firecrawl",
+    homepage: "https://www.firecrawl.dev",
+    feeds: [
+      { kind: "status", url: "https://status.firecrawl.dev/feed.rss" },
+      { kind: "releases", url: "https://github.com/firecrawl/firecrawl/releases.atom" },
+    ],
+  },
+  {
+    slug: "exa",
+    name: "Exa",
+    homepage: "https://exa.ai",
+    // status.exa.ai exposes no feed. Firecrawl candidate.
+    feeds: [],
+  },
+  {
+    slug: "linkup",
+    name: "Linkup",
+    homepage: "https://www.linkup.so",
+    // No status page or changelog feed found. Firecrawl candidate.
+    feeds: [],
+  },
+  {
+    slug: "apify",
+    name: "Apify",
+    homepage: "https://apify.com",
+    feeds: [{ kind: "status", url: "https://status.apify.com/history.atom" }],
+  },
+
+  // ===== Voice / meetings =====
+  {
+    slug: "elevenlabs",
+    name: "ElevenLabs",
+    homepage: "https://elevenlabs.io",
+    feeds: [{ kind: "status", url: "https://status.elevenlabs.io/history.atom" }],
+  },
+  {
+    slug: "recallai",
+    name: "Recall.ai",
+    homepage: "https://www.recall.ai",
+    // No public status/changelog feed found. Firecrawl candidate.
+    feeds: [],
+  },
+  {
+    slug: "deepgram",
+    name: "Deepgram",
+    homepage: "https://deepgram.com",
+    feeds: [{ kind: "status", url: "https://status.deepgram.com/history.atom" }],
   },
 
   // ===== Hosting / Infra =====
@@ -98,7 +220,19 @@ export const VENDORS: VendorDef[] = [
     slug: "aws",
     name: "AWS",
     homepage: "https://aws.amazon.com",
-    feeds: [{ kind: "status", url: "https://status.aws.amazon.com/rss/all.rss" }],
+    // Per-service feeds instead of all.rss: the firehose carried every service
+    // in every region, drowning users in irrelevant regional blips. These are
+    // empty except during an active incident in that service/region — quiet by
+    // design. Extend the list as users ask for more services.
+    feeds: [
+      { kind: "status", url: "https://status.aws.amazon.com/rss/bedrock-us-east-1.rss" },
+      { kind: "status", url: "https://status.aws.amazon.com/rss/ec2-us-east-1.rss" },
+      { kind: "status", url: "https://status.aws.amazon.com/rss/s3-us-east-1.rss" },
+      { kind: "status", url: "https://status.aws.amazon.com/rss/lambda-us-east-1.rss" },
+      { kind: "status", url: "https://status.aws.amazon.com/rss/ses-us-east-1.rss" },
+      { kind: "status", url: "https://status.aws.amazon.com/rss/rds-us-east-1.rss" },
+      { kind: "status", url: "https://status.aws.amazon.com/rss/ec2-eu-west-1.rss" },
+    ],
   },
   {
     slug: "github",
@@ -108,6 +242,12 @@ export const VENDORS: VendorDef[] = [
       { kind: "rss", url: "https://github.blog/changelog/feed/" },
       { kind: "status", url: "https://www.githubstatus.com/history.atom" },
     ],
+  },
+  {
+    slug: "inngest",
+    name: "Inngest",
+    homepage: "https://www.inngest.com",
+    feeds: [{ kind: "status", url: "https://status.inngest.com/history.atom" }],
   },
 
   // ===== Database / Backend =====
@@ -135,6 +275,24 @@ export const VENDORS: VendorDef[] = [
     homepage: "https://upstash.com",
     feeds: [{ kind: "status", url: "https://status.upstash.com/history.atom" }],
   },
+  {
+    slug: "postgresql",
+    name: "PostgreSQL",
+    homepage: "https://www.postgresql.org",
+    feeds: [{ kind: "releases", url: "https://www.postgresql.org/versions.rss" }],
+  },
+  {
+    slug: "redis",
+    name: "Redis",
+    homepage: "https://redis.io",
+    feeds: [{ kind: "releases", url: "https://github.com/redis/redis/releases.atom" }],
+  },
+  {
+    slug: "chromadb",
+    name: "ChromaDB",
+    homepage: "https://www.trychroma.com",
+    feeds: [{ kind: "releases", url: "https://github.com/chroma-core/chroma/releases.atom" }],
+  },
 
   // ===== Auth =====
   {
@@ -148,6 +306,14 @@ export const VENDORS: VendorDef[] = [
     name: "WorkOS",
     homepage: "https://workos.com",
     feeds: [{ kind: "status", url: "https://status.workos.com/history.atom" }],
+  },
+  {
+    slug: "auth0",
+    name: "Auth0",
+    homepage: "https://auth0.com",
+    // status.auth0.com is a custom Next.js SPA (status-page-v2) — no RSS/atom and
+    // its backend 400/404s on every feed/JSON endpoint. Firecrawl candidate.
+    feeds: [],
   },
 
   // ===== Payments =====
@@ -163,7 +329,10 @@ export const VENDORS: VendorDef[] = [
     slug: "resend",
     name: "Resend",
     homepage: "https://resend.com",
-    feeds: [{ kind: "status", url: "https://resend-status.com/history.atom" }],
+    feeds: [
+      { kind: "status", url: "https://resend-status.com/history.atom" },
+      { kind: "rss", url: "https://resend.com/changelog/rss.xml" },
+    ],
   },
   {
     slug: "twilio",
@@ -177,19 +346,42 @@ export const VENDORS: VendorDef[] = [
     homepage: "https://sendgrid.com",
     feeds: [{ kind: "status", url: "https://status.sendgrid.com/history.atom" }],
   },
+  {
+    slug: "brevo",
+    name: "Brevo",
+    homepage: "https://www.brevo.com",
+    feeds: [{ kind: "status", url: "https://status.brevo.com/history.atom" }],
+  },
 
   // ===== Monitoring / Observability =====
   {
     slug: "sentry",
     name: "Sentry",
     homepage: "https://sentry.io",
-    feeds: [{ kind: "status", url: "https://status.sentry.io/history.atom" }],
+    feeds: [
+      { kind: "status", url: "https://status.sentry.io/history.atom" },
+      { kind: "rss", url: "https://sentry.io/changelog/feed.xml" },
+    ],
   },
   {
     slug: "datadog",
     name: "Datadog",
     homepage: "https://www.datadoghq.com",
     feeds: [{ kind: "status", url: "https://status.datadoghq.com/history.atom" }],
+  },
+  {
+    slug: "posthog",
+    name: "PostHog",
+    homepage: "https://posthog.com",
+    // status.posthog.com renders client-side only (no feed); posthog.com/rss.xml
+    // is the engineering blog, not a changelog. Firecrawl candidate.
+    feeds: [],
+  },
+  {
+    slug: "svix",
+    name: "Svix",
+    homepage: "https://www.svix.com",
+    feeds: [{ kind: "status", url: "https://status.svix.com/history.atom" }],
   },
 
   // ===== Frameworks / runtimes / libraries (the library IS the product) =====
@@ -234,5 +426,32 @@ export const VENDORS: VendorDef[] = [
     name: "Tailwind CSS",
     homepage: "https://tailwindcss.com",
     feeds: [{ kind: "releases", url: "https://github.com/tailwindlabs/tailwindcss/releases.atom" }],
+  },
+  {
+    slug: "fastapi",
+    name: "FastAPI",
+    homepage: "https://fastapi.tiangolo.com",
+    feeds: [{ kind: "releases", url: "https://github.com/fastapi/fastapi/releases.atom" }],
+  },
+  {
+    slug: "pydantic",
+    name: "Pydantic",
+    homepage: "https://pydantic.dev",
+    feeds: [{ kind: "releases", url: "https://github.com/pydantic/pydantic/releases.atom" }],
+  },
+  {
+    slug: "spring-boot",
+    name: "Spring Boot",
+    homepage: "https://spring.io/projects/spring-boot",
+    feeds: [{ kind: "releases", url: "https://github.com/spring-projects/spring-boot/releases.atom" }],
+  },
+  {
+    slug: "java",
+    name: "Java",
+    homepage: "https://www.java.com",
+    // openjdk/jdk releases.atom is per-build early-access tags (jdk-28+5, …) —
+    // constant version-bump noise, not GA/security news. No clean official feed
+    // found; Temurin's repo has no releases. Firecrawl candidate.
+    feeds: [],
   },
 ];

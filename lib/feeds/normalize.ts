@@ -24,9 +24,20 @@ export function safePublishedAt(raw?: string | null): string {
   return new Date(t).toISOString();
 }
 
+// The rss-parser fields we read. Parser.Item types most of these, but `guid`
+// only appears via its catch-all index signature, so we pin the shape here.
+export interface FeedItem {
+  guid?: string;
+  link?: string;
+  title?: string;
+  content?: string;
+  contentSnippet?: string;
+  isoDate?: string;
+}
+
 // Map a parsed feed item to an entries row. Returns null when there's no stable
 // id to dedupe on — without one, every poll would insert a fresh duplicate.
-export function toEntryRow(vendorId: number, item: any): EntryRow | null {
+export function toEntryRow(vendorId: number, item: FeedItem): EntryRow | null {
   const externalId = item.guid ?? item.link ?? item.title ?? "";
   if (!externalId) return null;
   return {

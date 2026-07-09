@@ -32,6 +32,14 @@ it knows how to react. Pick exactly one:
 - skip:   DO NOT SHOW — an incident that is already RESOLVED or over (it's just
           history), a status update on a past problem, or anything with no
           relevance to a developer using the tool.
+
+Noise rule: maintenance or degradation confined to ONE narrow slice of the
+product — a single regional payment method (e.g. TWINT, Swish, MB WAY, BLIK,
+Multibanco, iDEAL), one bank or carrier integration, scheduled maintenance of a
+single datacenter or city-level location, or one minor sub-component
+most developers never touch — is skip, not yellow. Reserve yellow for
+maintenance that touches the core API, dashboard, SDKs, or the platform as a
+whole. When unsure whether most developers using the tool are affected, skip.
 Reply with the rating and a single concise sentence on why it matters.`;
 
 const model = genAI.getGenerativeModel({
