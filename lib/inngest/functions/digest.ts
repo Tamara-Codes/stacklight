@@ -13,7 +13,6 @@ import { supabaseAdmin } from "@/lib/db/admin";
 import { buildDigestEmail, type DigestEntry } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { unsubToken } from "@/lib/tokens";
-import { hasAccess } from "@/lib/plan";
 
 const BASE = process.env.PUBLIC_BASE_URL ?? "https://stackdigest.eu";
 
@@ -25,15 +24,16 @@ export const dispatchDigests = inngest.createFunction(
     // the same dedupe key even if it retries hours later.
     const date = new Date().toISOString().slice(0, 10);
 
-    const users = await step.run("eligible-users", async () => {
-      // Paginate — Supabase caps a single response at ~1000 rows, and at 100k
-      // users we can't pull them all at once.
-      const all: { id: string; plan: string; trial_ends_at: string | null }[] = [];
+    const eligible = await step.run("eligible-users", async () => {
+      // The product is free for everyone, so every user who hasn't unsubscribed
+      // gets the digest. Paginate — Supabase caps a single response at ~1000
+      // rows, and at 100k users we can't pull them all at once.
+      const all: { id: string }[] = [];
       const page = 1000;
       for (let from = 0; ; from += page) {
         const { data } = await supabaseAdmin
           .from("users")
-          .select("id, plan, trial_ends_at")
+          .select("id")
           .is("unsubscribed_at", null)
           .range(from, from + page - 1);
         if (!data?.length) break;
@@ -42,11 +42,6 @@ export const dispatchDigests = inngest.createFunction(
       }
       return all;
     });
-
-    // Both plans get the same daily digest — they differ only in stack size —
-    // and so does the 14-day signup trial. Expired trials with no plan get
-    // nothing (see lib/plan.ts).
-    const eligible = users.filter(hasAccess);
 
     // Fan out: one event per user. Inngest queues and runs them with the
     // concurrency limit set on sendUserDigest below.
@@ -132,7 +127,7 @@ export const sendUserDigest = inngest.createFunction(
       const token = unsubToken(userId);
       const { subject, html } = buildDigestEmail({
         entries: payload.entries,
-        manageUrl: `${BASE}/stack`,
+        manageUrl: `${BASE}/manage?u=${userId}&t=${token}`,
         unsubscribeUrl: `${BASE}/api/unsubscribe?u=${userId}&t=${token}`,
         date,
       });

@@ -3,9 +3,9 @@
 // account id, channel) per user in alert_channels (kind='slack'). Server/background only —
 // COMPOSIO_API_KEY must never reach the browser.
 //
-// Lazy singleton for the same reason as lib/stripe.ts: `next build` evaluates
-// route modules while collecting page data, and a module-level client would
-// make every build require COMPOSIO_API_KEY.
+// Lazy singleton: `next build` evaluates route modules while collecting page
+// data, and a module-level client would make every build require
+// COMPOSIO_API_KEY. Constructing on first use keeps it a runtime concern.
 import { Composio } from "@composio/core";
 
 let client: Composio | null = null;

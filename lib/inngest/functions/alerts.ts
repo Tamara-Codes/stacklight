@@ -19,7 +19,6 @@ import { sendDiscordMessage } from "@/lib/discord/webhook";
 import { buildRedAlertEmail } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { unsubToken } from "@/lib/tokens";
-import { hasAccess } from "@/lib/plan";
 
 const BASE = process.env.PUBLIC_BASE_URL ?? "https://stackdigest.eu";
 
@@ -56,25 +55,25 @@ export const dispatchRedAlert = inngest.createFunction(
     // huge. A user with several channels appears once per channel here, so we
     // dedupe to distinct user ids.
     const userIds = await step.run("recipients", async () => {
-      const rows: { user_id: string; users: { plan: string; trial_ends_at: string | null; unsubscribed_at: string | null } | null }[] = [];
+      const rows: { user_id: string; users: { unsubscribed_at: string | null } | null }[] = [];
       const page = 1000;
       for (let from = 0; ; from += page) {
         const { data } = await supabaseAdmin
           .from("alert_channels")
-          .select("user_id, users!inner(plan, trial_ends_at, unsubscribed_at)")
+          .select("user_id, users!inner(unsubscribed_at)")
           .range(from, from + page - 1);
         if (!data?.length) break;
         rows.push(...(data as unknown as typeof rows));
         if (data.length < page) break;
       }
 
-      // Subscribers and active trials qualify (same rule as dispatchDigests,
-      // via lib/plan.ts), and the unsubscribe flag is honoured on every send,
-      // every channel.
+      // The product is free for everyone, so anyone with an alert channel
+      // qualifies — the only filter is the unsubscribe flag, honoured on every
+      // send, every channel.
       const eligible = [
         ...new Set(
           rows
-            .filter((c) => c.users && hasAccess(c.users) && !c.users.unsubscribed_at)
+            .filter((c) => c.users && !c.users.unsubscribed_at)
             .map((c) => c.user_id)
         ),
       ];
@@ -176,7 +175,7 @@ export const sendUserRedAlert = inngest.createFunction(
             title,
             url,
             why,
-            manageUrl: `${BASE}/stack`,
+            manageUrl: `${BASE}/manage?u=${userId}&t=${unsubToken(userId)}`,
             unsubscribeUrl: `${BASE}/api/unsubscribe?u=${userId}&t=${unsubToken(userId)}`,
           });
           await sendEmail({ to: ctx.email, subject, html });

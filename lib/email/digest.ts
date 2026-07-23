@@ -256,6 +256,62 @@ export function buildRedAlertEmail(input: {
   return { subject, html };
 }
 
+// The welcome email, sent the moment someone subscribes. Same terminal-window
+// shell as the digest so the product reads as one thing from the first email.
+// Confirms what they signed up for and carries the manage link — the only way
+// back in, since there's no login.
+export function buildWelcomeEmail(input: {
+  manageUrl: string;
+  unsubscribeUrl: string;
+  toolCount: number;
+}): { subject: string; html: string } {
+  const { manageUrl, unsubscribeUrl, toolCount } = input;
+  const subject = "Stacklight — you're in";
+
+  const titlebarDots = (["red", "yellow", "green"] as Severity[])
+    .map((s) => `<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${SIGNAL[s]};font-size:0;">&nbsp;</span>`)
+    .join("&nbsp;");
+
+  const tools = `${numWord(toolCount)} tool${toolCount === 1 ? "" : "s"}`;
+
+  const html = `
+  <div style="background:${PAPER};padding:36px 16px;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:0 auto;background:${CARD};border-radius:10px;overflow:hidden;border:1px solid ${FRAME};">
+
+    <tr><td style="background:${TITLEBAR};padding:11px 16px;border-bottom:1px solid ${FRAME};">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+        <td style="white-space:nowrap;">${titlebarDots}</td>
+        <td align="center" style="font-family:${MONO};font-size:11px;color:${MUTED};">stacklight &mdash; welcome</td>
+        <td align="right" style="font-family:${MONO};font-size:11px;color:${MUTED};white-space:nowrap;"></td>
+      </tr></table>
+    </td></tr>
+
+    <tr><td style="padding:22px 22px 6px;">
+      <div style="font-family:${MONO};font-size:12px;color:${MUTED};">$ stacklight --subscribe</div>
+      <div style="font-family:${MONO};font-size:19px;font-weight:bold;color:${TEXT};line-height:1.5;margin-top:12px;">
+        You&rsquo;re watching ${escape(tools)}. We&rsquo;ll do the reading.
+      </div>
+    </td></tr>
+
+    <tr><td style="padding:6px 22px 24px;">
+      <div style="font-family:${MONO};font-size:13px;color:${DIM};line-height:1.6;">
+        Every morning you&rsquo;ll get one email rating what changed &mdash; ${escape("reds first")}, then heads-ups, then quiet ships. Turn on instant alerts (email, Slack, or Discord) whenever you like.
+      </div>
+    </td></tr>
+
+    <tr><td style="padding:14px 22px 20px;border-top:1px solid ${FRAME};">
+      <div style="font-family:${MONO};font-size:11px;color:${FAINT};">
+        <a href="${manageUrl}" style="color:${MUTED};">manage your stack &amp; alerts</a> &nbsp;&middot;&nbsp; <a href="${unsubscribeUrl}" style="color:${MUTED};">unsubscribe</a>
+      </div>
+      <div style="font-family:${MONO};font-size:11px;color:#454E5A;margin-top:6px;"># keep this email &mdash; the manage link is how you get back in</div>
+    </td></tr>
+
+  </table>
+  </div>`;
+
+  return { subject, html };
+}
+
 function escape(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 }

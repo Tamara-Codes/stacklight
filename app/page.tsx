@@ -25,7 +25,7 @@ const VENDORS = [
 ];
 
 // One label per intent, sitewide: every signup CTA says exactly this.
-const CTA_LABEL = "Start free trial";
+const CTA_LABEL = "Get started free";
 
 export default function Home() {
   return (
@@ -43,7 +43,7 @@ export default function Home() {
           <div className="site-links">
             <a href="#how">How it works</a>
             <a href="#pricing">Pricing</a>
-            <a href="/sign-in">Sign in</a>
+            <a href="/subscribe">Get started</a>
           </div>
         </div>
       </nav>
@@ -61,7 +61,7 @@ export default function Home() {
                 ping the moment something breaks.
               </p>
               <div className="rise d2" style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <a className="btn lg" href="/sign-in">{CTA_LABEL}</a>
+                <a className="btn lg" href="/subscribe">{CTA_LABEL}</a>
                 <a className="btn lg ghost" href="#how">See how it works</a>
               </div>
             </div>
@@ -169,28 +169,29 @@ export default function Home() {
 
         {/* ===== PRICING ===== */}
         <section id="pricing" className="container wide" style={{ padding: "40px 24px 48px" }}>
-          <h2 style={{ fontSize: 28 }}>Simple pricing</h2>
-          <p style={{ color: "var(--muted)", marginTop: 4 }}>
-            Everything is free for 14 days — no card, no plan choice. Then pick
-            by the size of the stack you built. Cancel anytime.
+          <h2 style={{ fontSize: 28 }}>Free for everyone</h2>
+          <p style={{ color: "var(--muted)", marginTop: 4, maxWidth: 560 }}>
+            No plans, no card, no catch. Track your whole stack, get the daily
+            digest, and turn on instant red alerts — all free.
           </p>
           <div className="plans" style={{ marginTop: 20 }}>
-            <Plan
-              name="Starter"
-              price="€5"
-              suffix="/mo"
-              cta={CTA_LABEL}
-              lines={["Up to 10 tools", "Daily digest, rated red, yellow, green", "Instant Slack alerts on reds"]}
-            />
-            <Plan
-              name="Full Stack"
-              price="€10"
-              suffix="/mo"
-              recommended
-              cta={CTA_LABEL}
-              lines={["Unlimited tools", "Daily digest, rated red, yellow, green", "Instant Slack alerts on reds, plus webhooks"]}
-              note="Stop one 2 a.m. outage and the year pays for itself."
-            />
+            <div
+              className="card recommended"
+              style={{ border: "1px solid var(--accent)", padding: 24, display: "flex", flexDirection: "column", maxWidth: 420 }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <h3 style={{ margin: 0 }}>Everything</h3>
+              </div>
+              <p className="plan-price">€0<small>/mo</small></p>
+              <ul style={{ margin: 0, paddingLeft: 18, color: "var(--muted)", display: "grid", gap: 6 }}>
+                <li>Unlimited tools</li>
+                <li>Daily digest, rated red, yellow, green</li>
+                <li>Instant alerts on reds — email, Slack, or Discord webhook</li>
+              </ul>
+              <div style={{ marginTop: "auto", paddingTop: 18 }}>
+                <a className="btn" href="/subscribe">{CTA_LABEL}</a>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -219,12 +220,12 @@ export default function Home() {
               a="We pull from official sources: feeds where vendors publish them, their changelogs where they don't. Tell us what you use and it's usually a quick add."
             />
             <Faq
-              q="Is there a free plan?"
-              a="No free tier, but both plans start with a 14-day free trial and no card is needed to begin. If you don't subscribe when it ends, the emails simply stop."
+              q="Is it really free?"
+              a="Yes — completely. No card, no trial clock, no paid tier. Track your whole stack, get the daily digest, and turn on instant alerts, all at no cost."
             />
             <Faq
-              q="How do I cancel?"
-              a="One click, anytime. No call, no “are you sure” maze."
+              q="How do I stop the emails?"
+              a="Every email has a one-click unsubscribe, and you can turn any alert channel off in your account. No call, no “are you sure” maze."
             />
             <Faq
               q="How accurate are the ratings?"
@@ -242,9 +243,9 @@ export default function Home() {
             The next breaking change is already in someone&apos;s release notes. Catch it
             before it catches you.
           </p>
-          <a className="btn lg" href="/sign-in">{CTA_LABEL}</a>
+          <a className="btn lg" href="/subscribe">{CTA_LABEL}</a>
           <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 14 }}>
-            14 days free, no card. Cancel anytime.
+            Free forever. No card, ever.
           </p>
         </section>
       </main>
@@ -254,7 +255,7 @@ export default function Home() {
           <span>© 2026 Stacklight</span>
           <span style={{ display: "flex", gap: 20 }}>
             <a href="#pricing">Pricing</a>
-            <a href="/sign-in">Sign in</a>
+            <a href="/subscribe">Get started</a>
           </span>
         </div>
       </footer>
@@ -323,42 +324,6 @@ function DigestItem({ color, vendor, text }: { color: string; vendor: string; te
         <strong style={{ fontWeight: 600 }}>{vendor}</strong>{" "}
         <span style={{ color: "var(--muted)" }}>{text}</span>
       </span>
-    </div>
-  );
-}
-
-function Plan({
-  name, price, suffix, lines, recommended, note, cta,
-}: {
-  name: string; price: string; suffix?: string; lines: string[];
-  recommended?: boolean; note?: string; cta: string;
-}) {
-  return (
-    <div
-      className={`card${recommended ? " recommended" : ""}`}
-      // Flex column so the CTA bottom-aligns across cards whose line counts differ.
-      style={{ border: `1px solid ${recommended ? "var(--accent)" : "var(--line)"}`, padding: 24, display: "flex", flexDirection: "column" }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-        <h3 style={{ margin: 0 }}>{name}</h3>
-        {recommended && <span className="badge">Recommended</span>}
-      </div>
-      <p className="plan-price">
-        {price}{suffix && <small>{suffix}</small>}
-      </p>
-      <ul style={{ margin: 0, paddingLeft: 18, color: "var(--muted)", display: "grid", gap: 6 }}>
-        {lines.map((l) => (
-          <li key={l}>{l}</li>
-        ))}
-      </ul>
-      {note && (
-        <p style={{ margin: "14px 0 0", color: "var(--muted)", fontSize: 13.5, fontStyle: "italic" }}>
-          {note}
-        </p>
-      )}
-      <div style={{ marginTop: "auto", paddingTop: 18 }}>
-        <a className={`btn${recommended ? "" : " ghost"}`} href="/sign-in">{cta}</a>
-      </div>
     </div>
   );
 }

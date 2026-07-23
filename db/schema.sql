@@ -44,19 +44,14 @@ create index entries_vendor_published_idx on entries (vendor_id, published_at de
 create table users (
   id          uuid primary key,              -- mirrors the Supabase auth user id
   email       text not null unique,
-  plan        text not null default 'none',  -- 'none' | 'starter' | 'pro' ('solo'/'founder'/'free' are legacy)
-  -- Signing up IS starting the trial: the default stamps signup+14d at row
-  -- creation. While it's in the future and plan is 'none', everything is
-  -- unlocked (unlimited stack, digests, alerts) — the Starter/Full Stack
-  -- choice only happens at checkout, after the user has built a real stack.
-  -- Ignored once plan != 'none', so lapsed subscribers don't fall back into
-  -- an (expired) trial.
-  trial_ends_at timestamptz not null default (now() + interval '14 days'),
   unsubscribed_at timestamptz,               -- honoured on every send (GDPR)
   created_at  timestamptz not null default now()
 );
--- Migration for databases created before the trial column existed.
-alter table users add column if not exists trial_ends_at timestamptz not null default (now() + interval '14 days');
+-- The product is free for everyone: no plans, no trial. Drop the old paid/trial
+-- columns if this schema is applied to a database created before the switch.
+-- (Idempotent: harmless on a fresh database.)
+alter table users drop column if exists plan;
+alter table users drop column if exists trial_ends_at;
 
 -- Which vendors a user follows. THIS is the personalization — a digest is
 -- "entries from vendors in my stack". Starter is capped at 10 (enforced in app code).
@@ -66,14 +61,10 @@ create table user_stacks (
   primary key (user_id, vendor_id)
 );
 
--- Stripe billing, kept separate from the auth identity and linked by id.
-create table subscriptions (
-  user_id              uuid primary key references users(id) on delete cascade,
-  stripe_customer_id   text not null,
-  stripe_subscription_id text,
-  status               text not null,        -- 'active' | 'past_due' | 'canceled'
-  current_period_end   timestamptz
-);
+-- The product is free for everyone — no billing. The old Stripe `subscriptions`
+-- table was removed; drop it if this schema is applied to a database that still
+-- has it. (Idempotent: harmless on a fresh database.)
+drop table if exists subscriptions;
 
 -- Which channels a user gets INSTANT red alerts on. One row per enabled
 -- channel; the mere presence of a row means "this channel is on". The daily
@@ -121,7 +112,6 @@ alter table vendors enable row level security;
 alter table entries enable row level security;
 alter table users enable row level security;
 alter table user_stacks enable row level security;
-alter table subscriptions enable row level security;
 alter table feed_sources enable row level security;
 alter table deliveries enable row level security;
 alter table delivery_entries enable row level security;
@@ -131,13 +121,11 @@ alter table alert_channels enable row level security;
 create policy "vendors readable" on vendors for select using (true);
 create policy "entries readable" on entries for select using (true);
 
--- a user may read/write only their own row, their own stack, their own sub.
+-- a user may read/write only their own row and their own stack.
 create policy "own user row" on users
   for all using (auth.uid() = id) with check (auth.uid() = id);
 create policy "own stack" on user_stacks
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "own subscription" on subscriptions
-  for select using (auth.uid() = user_id);
 create policy "own deliveries" on deliveries
   for select using (auth.uid() = user_id);
 create policy "own delivery entries" on delivery_entries

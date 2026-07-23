@@ -8,36 +8,29 @@
 //            { channel: 'discord', webhookUrl } saves/updates the webhook.
 //   DELETE — ?channel=email|discord turns that channel off.
 //
-// Same auth as /api/checkout and /api/slack: verify the Supabase access token
-// server-side; never trust a user id from the browser. Writes use the
-// service-role client (alert_channels has select-only RLS).
+// No login: identity is the signed (u, t) token from the /manage link (same as
+// /api/slack). Writes use the service-role client (alert_channels has
+// select-only RLS).
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/db/admin";
 import { isDiscordWebhookUrl } from "@/lib/discord/webhook";
-import { hasAccess } from "@/lib/plan";
+import { verifyUserId } from "@/lib/tokens";
 
-async function authedUser(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "") ?? "";
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-  return user;
-}
-
-// Alerts (any channel) require an active plan or live trial — the same gate the
-// alert fan-out and /api/slack apply.
-async function gate(userId: string): Promise<boolean> {
-  const { data: me } = await supabaseAdmin
-    .from("users").select("plan, trial_ends_at").eq("id", userId).single();
-  return !!me && hasAccess(me);
+// Verified user id from the (u, t) query params, or null.
+function authed(req: NextRequest): string | null {
+  const u = req.nextUrl.searchParams.get("u") ?? "";
+  const t = req.nextUrl.searchParams.get("t") ?? "";
+  return u && t && verifyUserId(u, t) ? u : null;
 }
 
 export async function GET(req: NextRequest) {
-  const user = await authedUser(req);
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const userId = authed(req);
+  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { data: rows } = await supabaseAdmin
     .from("alert_channels")
     .select("kind")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .in("kind", ["email", "discord"]);
 
   const kinds = new Set((rows ?? []).map((r) => r.kind));
@@ -48,11 +41,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const user = await authedUser(req);
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  if (!(await gate(user.id))) {
-    return NextResponse.json({ error: "Alerts need an active plan or trial." }, { status: 403 });
-  }
+  const userId = authed(req);
+  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { channel, webhookUrl } = (await req.json()) as {
     channel?: string;
@@ -63,7 +53,7 @@ export async function PUT(req: NextRequest) {
     await supabaseAdmin
       .from("alert_channels")
       .upsert(
-        { user_id: user.id, kind: "email", target: null },
+        { user_id: userId, kind: "email", target: null },
         { onConflict: "user_id,kind", ignoreDuplicates: true }
       );
     return NextResponse.json({ email: true });
@@ -80,7 +70,7 @@ export async function PUT(req: NextRequest) {
     await supabaseAdmin
       .from("alert_channels")
       .upsert(
-        { user_id: user.id, kind: "discord", target: url },
+        { user_id: userId, kind: "discord", target: url },
         { onConflict: "user_id,kind" }
       );
     return NextResponse.json({ discord: { connected: true } });
@@ -90,8 +80,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const user = await authedUser(req);
-  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const userId = authed(req);
+  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const channel = req.nextUrl.searchParams.get("channel");
   if (channel !== "email" && channel !== "discord") {
@@ -101,7 +91,7 @@ export async function DELETE(req: NextRequest) {
   await supabaseAdmin
     .from("alert_channels")
     .delete()
-    .match({ user_id: user.id, kind: channel });
+    .match({ user_id: userId, kind: channel });
 
   return channel === "email"
     ? NextResponse.json({ email: false })

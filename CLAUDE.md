@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Stacklight monitors a developer's AI/dev tool stack (Anthropic, Vercel, Supabase, Clerk, OpenAI, Twilio…) and emails them a daily digest of updates, each rated red / yellow / green. Two paid plans differing ONLY in stack size (features identical, incl. instant red alerts by email / Slack / Discord): Starter (€5/mo, up to 10 tools) and Full Stack (€10/mo, plan value 'pro', unlimited). No free tier — **signup itself starts a 14-day in-app trial** (`users.trial_ends_at`, everything unlocked, unlimited stack, no plan choice up front); Stripe only enters when the user picks a plan afterwards (card required, no Stripe-side trial). Server-side access = subscription OR live trial — always gate via `hasAccess` in `lib/plan.ts`, never by plan alone; the client counterpart is `trialActive` from `useAuthedUser`. Legacy plan values 'solo'/'free' map to none, 'founder' to pro (see `normalizePlan`).
+Stacklight monitors a developer's AI/dev tool stack (Anthropic, Vercel, Supabase, Clerk, OpenAI, Twilio…) and emails them a daily digest of updates, each rated red / yellow / green, plus instant red alerts by email / Slack / Discord. **The product is 100% free for everyone — no plans, no trial, no billing.**
 
-Next.js 15 (App Router) + React 19 on Vercel, Supabase Postgres, Inngest for background jobs, Gemini for rating, Resend for email, Stripe for billing, Composio for the Slack connection (OAuth + message sending).
+**It's a newsletter, not an app with accounts.** There is NO login, NO password, NO OAuth, NO Supabase Auth. Subscribing = giving an email + picking a stack on the public `/subscribe` page (`POST /api/subscribe` creates the `users` row and `user_stacks`, then emails a welcome). A returning user manages their stack + alert channels on `/manage`, authenticated only by a **signed `(u, t)` token** in the URL — `t = HMAC(userId)` from `lib/tokens.ts` (`signUserId`/`verifyUserId`). Every email footer carries that signed manage link (`manageUrl()`), which is the only way back in. The same token gates unsubscribe. There's no access/plan gate at all: any user with a `users` row and no `unsubscribed_at` gets the digest (the fan-out filters on `unsubscribed_at` alone). (History: this was once a paid Starter/Full Stack Stripe model with a 14-day trial and Supabase-Auth accounts, gated by a `hasAccess`/`lib/plan.ts` helper; all of it was removed — see git history if paid/accounts ever need to come back.)
+
+Next.js 15 (App Router) + React 19 on Vercel, Supabase Postgres, Inngest for background jobs, Gemini for rating, Resend for email, Composio for the Slack connection (OAuth + message sending).
 
 ## Commands
 
@@ -44,15 +46,12 @@ Jobs retry, so several things are deliberately idempotent:
 
 ## Auth & security model
 
-- **Two Supabase clients, never mix them:**
-  - `lib/db/supabase.ts` — browser/anon client (publishable key). Used in client components for auth and RLS-guarded reads/writes.
-  - `lib/db/admin.ts` — `supabaseAdmin`, service-role client (secret key). **Bypasses RLS.** Server/background only — never import into a client component or expose the key.
-- **RLS is the authorization boundary** (`db/schema.sql`): `vendors`/`entries` are world-readable, never writable; a user can read/write only their own `users`, `user_stacks`, `subscriptions` rows. The browser does stack edits directly via the anon client (e.g. `app/stack/page.tsx`) and RLS is what makes that safe.
-- **Background jobs use `supabaseAdmin`** and are intentionally unaffected by RLS.
-- **API routes never trust a user id from the browser.** `/api/checkout` verifies the Supabase access token server-side via `supabaseAdmin.auth.getUser(token)`.
-- **Stripe webhook** (`/api/stripe/webhook`) verifies the signature against the raw request body — it's the source of truth for who has paid, updating `subscriptions.status` and `users.plan`.
-- **Unsubscribe** (`/api/unsubscribe`) must work without login, so the user id in the link is HMAC-signed (`lib/tokens.ts`); the route only acts if the signature verifies.
-- The **Starter 10-tool cap is enforced in app code** (`STARTER_LIMIT` in `app/(app)/stack/page.tsx`), not in the DB.
+- **One Supabase client, server-only.** `lib/db/admin.ts` — `supabaseAdmin`, service-role client (secret key). **Bypasses RLS.** There is NO browser Supabase client anymore — the browser never touches the DB directly. Every DB read/write goes through a server route using `supabaseAdmin`. Never expose the secret key or import this into anything that ships to the browser.
+- **Identity is a signed token, not a session.** No accounts/login. The user id is proven by `(u, t)` where `t = HMAC(userId)` (`lib/tokens.ts`). `/api/manage`, `/api/slack`, `/api/alerts`, and `/api/unsubscribe` all verify it the same way (`verifyUserId`) and act only on the matching user's rows. Never trust a bare `u` without a valid `t`.
+- **`/api/subscribe` and `/api/vendors` are the only public routes.** Subscribe validates the email + vendor ids server-side (never trusts the client's numbers); vendors just lists the public monitorable set for the picker.
+- **RLS is defense-in-depth, not the primary boundary.** `db/schema.sql` still has per-row policies, but since there's no browser client and no auth session (`auth.uid()` is always null), the anon path is effectively closed regardless. The real boundary is the signed token + service-role routes.
+- **Background jobs use `supabaseAdmin`** too and are intentionally unaffected by RLS.
+- **No tool cap.** The product is free and every user's stack is unlimited — there is no per-plan limit anywhere.
 
 ## Layout
 
@@ -63,7 +62,8 @@ Jobs retry, so several things are deliberately idempotent:
 - `lib/discord/webhook.ts` — Discord red alerts via a user-supplied incoming webhook (`sendDiscordMessage`, `isDiscordWebhookUrl`). No OAuth, no Composio, no env key — the webhook URL is the credential, stored per-user in `alert_channels`.
 - `lib/ai/severity.ts` — Gemini rating. Model is the `MODEL` constant; uses a JSON response schema to force `{severity, why}`.
 - `lib/email/digest.ts` — pure `buildDigestEmail` (inline styles, reds sorted first); `lib/email/client.ts` — Resend wrapper.
-- `app/api/` — `checkout`, `stripe/webhook`, `unsubscribe`, `inngest`, `slack` (connect/status/channel/disconnect; GET doubles as the OAuth callback by adopting the ACTIVE Composio connection), `alerts` (GET/PUT/DELETE for the email + Discord alert channels) route handlers.
+- **Frontend pages:** `app/page.tsx` (public landing), `app/subscribe/page.tsx` (public funnel: pick stack → email → `POST /api/subscribe`), `app/manage/page.tsx` (returning users, token-authed via `?u=&t=` from the emailed link — edit stack + alert channels). `components/StackPicker.tsx` is the shared vendor-bubble picker used by both. No `(app)` route group / login shell anymore.
+- `app/api/` — `vendors` (GET, public list for the picker), `subscribe` (POST, public signup), `manage` (GET/PUT stack, token-authed), `unsubscribe`, `inngest`, `slack` (connect/status/channel/disconnect; GET doubles as the OAuth callback by adopting the ACTIVE Composio connection; callback returns to `/manage` carrying the token), `alerts` (GET/PUT/DELETE email + Discord channels). All user routes authenticate with the signed `(u, t)` token.
 - `db/` — `schema.sql` (apply with `npm run db:push`), `seed-vendors.sql`. The `*-wonderpages*` file is unrelated leftover.
 - `@/*` path alias maps to the repo root (see `tsconfig.json`).
 
