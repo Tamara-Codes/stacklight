@@ -14,7 +14,7 @@ import { buildWelcomeEmail } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { manageUrl, signUserId } from "@/lib/tokens";
 
-const BASE = process.env.PUBLIC_BASE_URL ?? "https://stackdigest.eu";
+const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.tamara.rocks";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {

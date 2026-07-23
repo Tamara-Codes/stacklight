@@ -4,7 +4,7 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
-const FROM = process.env.EMAIL_FROM ?? "Stacklight <digest@stackdigest.eu>";
+const FROM = process.env.EMAIL_FROM ?? "Stacklight <digest@stacklight.tamara.rocks>";
 
 export interface EmailMessage {
   to: string;

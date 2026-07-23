@@ -14,7 +14,7 @@ import { buildDigestEmail, type DigestEntry } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { unsubToken } from "@/lib/tokens";
 
-const BASE = process.env.PUBLIC_BASE_URL ?? "https://stackdigest.eu";
+const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.tamara.rocks";
 
 export const dispatchDigests = inngest.createFunction(
   { id: "dispatch-digests" },
