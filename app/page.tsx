@@ -7,8 +7,6 @@
 // read on the dark theme. Brands missing from Simple Icons (OpenAI: CDN 404s) fall
 // back to a clean wordmark rather than a broken image. Every brand listed here must
 // exist in lib/feeds/sources.ts — don't advertise a vendor we don't monitor.
-import Link from "next/link";
-
 const VENDORS = [
   { name: "Anthropic", slug: "anthropic" },
   { name: "OpenAI", slug: null },
@@ -25,29 +23,11 @@ const VENDORS = [
 ];
 
 // One label per intent, sitewide: every signup CTA says exactly this.
-const CTA_LABEL = "Get started free";
+const CTA_LABEL = "Get started";
 
 export default function Home() {
   return (
     <>
-      <nav className="site-nav">
-        <div className="site-nav-inner">
-          <Link className="brand" href="/">
-            <span className="brand-mark" aria-hidden>
-              <span style={{ background: "var(--red)" }} />
-              <span style={{ background: "var(--yellow)" }} />
-              <span style={{ background: "var(--green)" }} />
-            </span>
-            Stacklight
-          </Link>
-          <div className="site-links">
-            <a href="#how">How it works</a>
-            <a href="#pricing">Pricing</a>
-            <a href="/subscribe">Get started</a>
-          </div>
-        </div>
-      </nav>
-
       <main>
         {/* ===== HERO (asymmetric split: copy + the actual digest email) ===== */}
         <section className="container wide hero" style={{ padding: "80px 24px 48px" }}>
@@ -57,8 +37,8 @@ export default function Home() {
                 Know what changed in your stack before it breaks prod.
               </h1>
               <p className="rise d1" style={{ fontSize: 18, color: "var(--muted)", maxWidth: 440, margin: 0 }}>
-                One daily email rating every update in your stack, plus a Slack
-                ping the moment something breaks.
+                One daily email rating every update in your stack, plus an
+                instant Slack or Discord ping the moment something breaks.
               </p>
               <div className="rise d2" style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <a className="btn lg" href="/subscribe">{CTA_LABEL}</a>
@@ -101,11 +81,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== PROBLEM (agitate) — one bad day in an unwatched stack, as a timeline.
-             Sits on the plain page background; the Slack band below is the page's ONE
-             full-bleed accent moment. ===== */}
+        {/* ===== PROBLEM (agitate) — one bad day in an unwatched stack, as a timeline ===== */}
         <section>
-          <div className="container" style={{ padding: "72px 24px 40px" }}>
+          <div className="container" style={{ padding: "96px 24px 72px" }}>
             <h2 style={{ fontSize: "clamp(30px, 3.4vw, 38px)", lineHeight: 1.1, margin: 0, maxWidth: "22ch" }}>
               The changelog didn&apos;t warn you. The 500 error did.
             </h2>
@@ -130,132 +108,60 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ===== SLACK INSTANT ALERTS — full-bleed accent band with semaphore ===== */}
-        <section className="bleed slack" style={{ margin: "48px 0" }}>
-          <div className="container wide" style={{ padding: "72px 24px" }}>
-            <div className="slack-grid">
-              <div className="semaphore" aria-hidden>
-                <span className="light red" />
-                <span className="light yellow" />
-                <span className="light green" />
-              </div>
-              <div>
-                <h2 style={{ fontSize: 32, margin: "0 0 12px", lineHeight: 1.12 }}>
-                  Breaking changes can&apos;t wait for tomorrow&apos;s email.
-                </h2>
-                <p style={{ fontSize: 18, color: "var(--muted)", maxWidth: 680, margin: 0 }}>
-                  The daily digest catches everything. But the moment a{" "}
-                  <strong style={{ color: "var(--text)", fontWeight: 600 }}>red-rated</strong>{" "}
-                  update lands on one of your tools, Stacklight pings your Slack,
-                  so you&apos;re patching before your users are refreshing. Any
-                  channel, or a webhook straight into your own pipeline.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* ===== HOW IT WORKS (borderless numbered steps over soft accent circles) ===== */}
-        <section id="how" className="container wide howit" style={{ padding: "64px 32px" }}>
+        <section id="how" className="container wide howit" style={{ padding: "96px 32px" }}>
           <span className="ring r1" aria-hidden />
           <span className="ring r2" aria-hidden />
           <h2 style={{ fontSize: 28, marginBottom: 8 }}>How it works</h2>
           <div className="steps" style={{ marginTop: 24 }}>
-            <Step n="1" title="Pick your stack" body="Choose from 40+ supported vendors. Takes about a minute." />
-            <Step n="2" title="We watch, so you don't" body="Every morning we poll the official sources and rate each new update." />
-            <Step n="3" title="Read one email" body="Scan the reds with your coffee. Reds in between ping your Slack instantly." />
+            <Step n="1" title="Pick your stack" body="Choose from 40+ supported vendors." />
+            <Step n="2" title="We watch, so you don't" body="Every morning we read each vendor's status page, changelog, and GitHub releases — official feeds only, never scraped — and rate what's new." />
+            <Step n="3" title="Read one email" body="Scan the reds with your coffee. Reds in between ping your Slack or Discord instantly." />
           </div>
         </section>
 
-        {/* ===== PRICING ===== */}
-        <section id="pricing" className="container wide" style={{ padding: "40px 24px 48px" }}>
-          <h2 style={{ fontSize: 28 }}>Free for everyone</h2>
-          <p style={{ color: "var(--muted)", marginTop: 4, maxWidth: 560 }}>
-            No plans, no card, no catch. Track your whole stack, get the daily
-            digest, and turn on instant red alerts — all free.
-          </p>
-          <div className="plans" style={{ marginTop: 20 }}>
-            <div
-              className="card recommended"
-              style={{ border: "1px solid var(--accent)", padding: 24, display: "flex", flexDirection: "column", maxWidth: 420 }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                <h3 style={{ margin: 0 }}>Everything</h3>
-              </div>
-              <p className="plan-price">€0<small>/mo</small></p>
-              <ul style={{ margin: 0, paddingLeft: 18, color: "var(--muted)", display: "grid", gap: 6 }}>
-                <li>Unlimited tools</li>
-                <li>Daily digest, rated red, yellow, green</li>
-                <li>Instant alerts on reds — email, Slack, or Discord webhook</li>
-              </ul>
-              <div style={{ marginTop: "auto", paddingTop: 18 }}>
-                <a className="btn" href="/subscribe">{CTA_LABEL}</a>
-              </div>
+        {/* ===== INSTANT ALERTS — semaphore + copy on the plain page background ===== */}
+        <section className="container wide" style={{ padding: "160px 24px 96px" }}>
+          <div className="slack-grid">
+            <div className="semaphore" aria-hidden>
+              <span className="light red" />
+              <span className="light yellow" />
+              <span className="light green" />
+            </div>
+            <div>
+              <h2 style={{ fontSize: 32, margin: "0 0 12px", lineHeight: 1.12 }}>
+                Breaking changes can&apos;t wait for tomorrow&apos;s email.
+              </h2>
+              <p style={{ fontSize: 18, color: "var(--muted)", maxWidth: 680, margin: 0 }}>
+                The daily digest catches everything. But the moment a{" "}
+                <strong style={{ color: "var(--text)", fontWeight: 600 }}>red-rated</strong>{" "}
+                update lands on one of your tools, Stacklight pings you
+                instantly — in Slack, Discord, or your inbox — so you&apos;re
+                patching before your users are refreshing.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* ===== FAQ (two-column grid) ===== */}
-        <section className="container wide" style={{ padding: "32px 24px" }}>
-          <h2 style={{ fontSize: 28, marginBottom: 16 }}>Questions</h2>
-          <div className="faq">
-            <Faq
-              q="Isn’t this just an RSS reader?"
-              a="An RSS reader hands you the firehose and makes you judge every item. Stacklight reads it for you and rates each update by how badly it can bite you, so you act on the reds and ignore the rest."
-            />
-            <Faq
-              q="What counts as red?"
-              a="Anything that can break running code or cost you money if ignored: breaking API changes, dated deprecations, security advisories, pricing changes. New features are yellow. Cosmetic news is green."
-            />
-            <Faq
-              q="How fast are the Slack alerts?"
-              a="As soon as we detect a red-rated update on one of your tools, the ping fires. Minutes, not the next morning. The daily digest still recaps everything, reds first."
-            />
-            <Faq
-              q="Will I get spammed?"
-              a="No. At most one email a day for the tools you chose, plus Slack pings reserved strictly for reds. A quiet day means a short digest and silence in Slack."
-            />
-            <Faq
-              q="My tool isn’t listed. Can you add it?"
-              a="We pull from official sources: feeds where vendors publish them, their changelogs where they don't. Tell us what you use and it's usually a quick add."
-            />
-            <Faq
-              q="Is it really free?"
-              a="Yes — completely. No card, no trial clock, no paid tier. Track your whole stack, get the daily digest, and turn on instant alerts, all at no cost."
-            />
-            <Faq
-              q="How do I stop the emails?"
-              a="Every email has a one-click unsubscribe, and you can turn any alert channel off in your account. No call, no “are you sure” maze."
-            />
-            <Faq
-              q="How accurate are the ratings?"
-              a="Ratings come from the official source text, scored for real-world impact. The full item is always one click away if you want to judge for yourself."
-            />
-          </div>
-        </section>
-
-        {/* ===== FINAL CTA ===== */}
-        <section className="container" style={{ padding: "48px 24px 88px", textAlign: "center" }}>
-          <h2 style={{ fontSize: 30, margin: "0 0 10px", lineHeight: 1.15 }}>
-            Your stack ships changes today, whether you&apos;re reading them or not.
-          </h2>
-          <p style={{ fontSize: 17, color: "var(--muted)", maxWidth: 520, margin: "0 auto 24px" }}>
-            The next breaking change is already in someone&apos;s release notes. Catch it
-            before it catches you.
-          </p>
-          <a className="btn lg" href="/subscribe">{CTA_LABEL}</a>
-          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 14 }}>
-            Free forever. No card, ever.
-          </p>
-        </section>
       </main>
 
       <footer className="site-footer">
         <div className="site-footer-inner">
-          <span>© 2026 Stacklight</span>
-          <span style={{ display: "flex", gap: 20 }}>
-            <a href="#pricing">Pricing</a>
-            <a href="/subscribe">Get started</a>
+          <span>
+            © 2026 Stacklight · <a href="mailto:codewithtamara@gmail.com">codewithtamara@gmail.com</a>
+          </span>
+          <span style={{ display: "flex", gap: 18, alignItems: "center" }}>
+            <span>Made by <a href="https://tamara.rocks" target="_blank" rel="noreferrer">Tamara</a></span>
+            <a href="https://x.com/CodeWithTamara" target="_blank" rel="noreferrer" aria-label="Tamara on X" style={{ display: "inline-flex" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z" />
+              </svg>
+            </a>
+            <a href="https://www.linkedin.com/in/tamaracodes" target="_blank" rel="noreferrer" aria-label="Tamara on LinkedIn" style={{ display: "inline-flex" }}>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+              </svg>
+            </a>
           </span>
         </div>
       </footer>
@@ -324,15 +230,6 @@ function DigestItem({ color, vendor, text }: { color: string; vendor: string; te
         <strong style={{ fontWeight: 600 }}>{vendor}</strong>{" "}
         <span style={{ color: "var(--muted)" }}>{text}</span>
       </span>
-    </div>
-  );
-}
-
-function Faq({ q, a }: { q: string; a: string }) {
-  return (
-    <div className="card">
-      <h3 style={{ margin: "0 0 6px", fontSize: 16 }}>{q}</h3>
-      <p style={{ margin: 0, color: "var(--muted)", fontSize: 15 }}>{a}</p>
     </div>
   );
 }
