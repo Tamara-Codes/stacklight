@@ -9,12 +9,14 @@ import Link from "next/link";
 import { StackPicker, type Vendor } from "@/components/StackPicker";
 
 interface SlackState { connected: boolean; channel: string; }
+type ManageTab = "stack" | "alerts";
 
 export default function ManagePage() {
   const [creds, setCreds] = useState<{ u: string; t: string } | null>(null);
   const [invalid, setInvalid] = useState(false);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
+  const [activeTab, setActiveTab] = useState<ManageTab>("stack");
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [stackError, setStackError] = useState<string | null>(null);
@@ -164,24 +166,46 @@ export default function ManagePage() {
   if (loading) return <main className="container" style={{ paddingTop: 96 }}>Loading…</main>;
 
   return (
-    <main className="container" style={{ paddingTop: 40, paddingBottom: 110 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-        <h1 style={{ fontSize: 28, margin: 0 }}>Manage</h1>
+    <main className="container manage-page" style={{ paddingTop: 40, paddingBottom: 110 }}>
+      <div className="manage-tabs-row">
+        <div className="manage-tabs" role="tablist" aria-label="Subscription settings">
+          <button
+            id="stack-tab"
+            className="manage-tab"
+            role="tab"
+            type="button"
+            aria-selected={activeTab === "stack"}
+            aria-controls="stack-panel"
+            onClick={() => setActiveTab("stack")}
+          >
+            Stack
+          </button>
+          <button
+            id="alerts-tab"
+            className="manage-tab"
+            role="tab"
+            type="button"
+            aria-selected={activeTab === "alerts"}
+            aria-controls="alerts-panel"
+            onClick={() => setActiveTab("alerts")}
+          >
+            Alerts
+          </button>
+        </div>
         <span style={{ color: "var(--muted)", fontSize: 14 }}>{email}</span>
       </div>
 
-      {/* Stack */}
-      <div style={{ marginTop: 28, textAlign: "center" }}>
-        <h2 style={{ fontSize: 20, margin: 0 }}>Your stack</h2>
-        <p style={{ color: "var(--muted)", marginTop: 8, fontSize: 14 }}>
-          Tap to add or remove. Changes save instantly. {selected.size} selected.
-        </p>
-        <StackPicker vendors={vendors} selected={selected} onToggle={toggle} />
-        {stackError && <p role="alert" style={{ color: "var(--red)", fontSize: 14 }}>{stackError}</p>}
-      </div>
-
-      {/* Alerts */}
-      <div className="card" style={{ marginTop: 24 }}>
+      {activeTab === "stack" ? (
+        <section id="stack-panel" role="tabpanel" aria-labelledby="stack-tab" style={{ marginTop: 28, textAlign: "center" }}>
+          <h1 style={{ fontSize: 20, margin: 0 }}>Your stack</h1>
+          <p style={{ color: "var(--muted)", marginTop: 8, fontSize: 14 }}>
+            Tap to add or remove. Changes save instantly. {selected.size} selected.
+          </p>
+          <StackPicker vendors={vendors} selected={selected} onToggle={toggle} />
+          {stackError && <p role="alert" style={{ color: "var(--red)", fontSize: 14 }}>{stackError}</p>}
+        </section>
+      ) : (
+      <section id="alerts-panel" role="tabpanel" aria-labelledby="alerts-tab" className="card" style={{ marginTop: 24 }}>
         <p className="eyebrow" style={{ margin: "0 0 4px" }}>Instant red alerts</p>
         <p style={{ color: "var(--muted)", fontSize: 14, margin: "0 0 4px" }}>
           You always get the daily digest by email. Turn on any of these for an
@@ -275,12 +299,8 @@ export default function ManagePage() {
           )}
           {alertsError && <p role="alert" style={{ color: "var(--red)", fontSize: 14, marginTop: 12 }}>{alertsError}</p>}
         </div>
-      </div>
-
-      <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 20 }}>
-        Want to stop the emails? Every Stacklight email has a one-click
-        unsubscribe at the bottom.
-      </p>
+      </section>
+      )}
     </main>
   );
 }

@@ -72,7 +72,7 @@ export default function SubscribePage() {
   }
 
   return (
-    <main className="container" style={{ paddingTop: 56, paddingBottom: 110, textAlign: "center" }}>
+    <main className="container subscribe-page" style={{ textAlign: "center" }}>
       <h1 style={{ fontSize: 30, margin: 0 }}>Build your stack</h1>
       <p style={{ color: "var(--muted)", marginTop: 10 }}>
         Tap every tool you want watched.

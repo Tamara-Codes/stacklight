@@ -42,7 +42,6 @@ export default function Home() {
               </p>
               <div className="rise d2" style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
                 <a className="btn lg" href="/subscribe">{CTA_LABEL}</a>
-                <a className="btn lg ghost" href="#how">See how it works</a>
               </div>
             </div>
             <div className="rise d3">
