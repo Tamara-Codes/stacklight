@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     .eq("id", u);
 
   return new Response(
-    "<h1>You're unsubscribed.</h1><p>You won't receive any more Stacklight emails. Changed your mind? Resubscribe any time at stacklight.</p>",
+    "<h1>You're unsubscribed.</h1><p>You won't receive any more StackLight emails. Changed your mind? Resubscribe any time at stacklight.</p>",
     { status: 200, headers: { "content-type": "text/html" } }
   );
 }

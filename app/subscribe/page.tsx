@@ -92,6 +92,12 @@ export default function SubscribePage() {
 
   return (
     <main className="container subscribe-page" style={{ textAlign: "center" }}>
+      <div className="subscribe-brand-row">
+        <Link href="/" className="subscribe-brand" aria-label="StackLight home">
+          <span className="subscribe-brand-mark" aria-hidden><span /><span /><span /></span>
+          StackLight
+        </Link>
+      </div>
       {step === "pick" ? (
         <>
           <h1 style={{ fontSize: 30, margin: 0 }}>Build your stack</h1>
@@ -120,7 +126,7 @@ export default function SubscribePage() {
         <form className="subscribe-alerts" onSubmit={submit}>
           <h1 style={{ fontSize: 30, margin: 0 }}>Choose your alerts</h1>
           <p style={{ color: "var(--muted)", margin: "10px 0 24px" }}>
-            Your daily Stacklight update goes to the email address below. Choose any channels for immediate red alerts.
+            Your daily StackLight update goes to the email address below. Choose any channels for immediate red alerts.
           </p>
 
           <div className="subscribe-channel-grid" role="group" aria-label="Alert channels">
@@ -154,7 +160,7 @@ export default function SubscribePage() {
           </div>
 
           <label className="subscribe-field">
-            <span>Email for your daily Stacklight update</span>
+            <span>Email for your daily StackLight update</span>
             <input
               type="email"
               required

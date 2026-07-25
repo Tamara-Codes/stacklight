@@ -2,6 +2,7 @@
 // (Problem, Agitate, Solution). Styling uses the tokens in globals.css — do
 // not introduce new colors. The red/yellow/green dots are SEMANTIC (severity), the
 // one case where status dots are intentional, not decoration.
+import Link from "next/link";
 
 // Real brand marks via Simple Icons CDN, served white and dimmed via CSS so they
 // read on the dark theme. Brands missing from Simple Icons (OpenAI: CDN 404s) fall
@@ -31,6 +32,12 @@ export default function Home() {
       <main>
         {/* ===== HERO (asymmetric split: copy + the actual digest email) ===== */}
         <section className="container wide hero" style={{ padding: "80px 24px 48px" }}>
+          <div className="landing-brand-row">
+            <Link href="/" className="landing-brand" aria-label="StackLight home">
+              <span className="landing-brand-mark" aria-hidden><span /><span /><span /></span>
+              StackLight
+            </Link>
+          </div>
           <div className="hero-grid">
             <div>
               <h1 className="display rise">
@@ -134,7 +141,7 @@ export default function Home() {
               <p style={{ fontSize: 18, color: "var(--muted)", maxWidth: 680, margin: 0 }}>
                 The daily digest catches everything. But the moment a{" "}
                 <strong style={{ color: "var(--text)", fontWeight: 600 }}>red-rated</strong>{" "}
-                update lands on one of your tools, Stacklight pings you
+                update lands on one of your tools, StackLight pings you
                 instantly — in Slack, Discord, or your inbox — so you&apos;re
                 patching before your users are refreshing.
               </p>

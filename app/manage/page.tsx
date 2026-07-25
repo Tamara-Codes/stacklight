@@ -155,7 +155,7 @@ export default function ManagePage() {
       <main className="container" style={{ paddingTop: 96, paddingBottom: 96, textAlign: "center", maxWidth: 520 }}>
         <h1 style={{ fontSize: 28, margin: "0 0 12px" }}>This link isn&rsquo;t valid</h1>
         <p style={{ color: "var(--muted)", fontSize: 16, lineHeight: 1.6 }}>
-          Open the “manage your stack” link from any Stacklight email to get back
+          Open the “manage your stack” link from any StackLight email to get back
           in. Each email carries a fresh one.
         </p>
         <Link className="btn" href="/" style={{ marginTop: 24 }}>Back to home</Link>

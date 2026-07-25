@@ -299,6 +299,20 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
    desktop selection flow within one viewport; smaller screens keep their
    natural document scroll so every vendor remains reachable. */
 .subscribe-page { max-width: 1120px; padding-top: 32px; padding-bottom: 32px; }
+.subscribe-brand-row { margin-bottom: 28px; }
+.subscribe-brand { display: inline-flex; align-items: center; gap: 9px; color: var(--text); font-size: 16px; font-weight: 700; letter-spacing: -0.01em; text-decoration: none; }
+.subscribe-brand-mark { display: inline-flex; gap: 3px; }
+.subscribe-brand-mark span { width: 7px; height: 7px; border-radius: 50%; }
+.subscribe-brand-mark span:nth-child(1) { background: var(--red); }
+.subscribe-brand-mark span:nth-child(2) { background: var(--yellow); }
+.subscribe-brand-mark span:nth-child(3) { background: var(--green); }
+.landing-brand-row { margin-bottom: 34px; }
+.landing-brand { display: inline-flex; align-items: center; gap: 9px; color: var(--text); font-size: 16px; font-weight: 700; letter-spacing: -0.01em; text-decoration: none; }
+.landing-brand-mark { display: inline-flex; gap: 3px; }
+.landing-brand-mark span { width: 7px; height: 7px; border-radius: 50%; }
+.landing-brand-mark span:nth-child(1) { background: var(--red); }
+.landing-brand-mark span:nth-child(2) { background: var(--yellow); }
+.landing-brand-mark span:nth-child(3) { background: var(--green); }
 .subscribe-page .bubble-cloud { margin-top: 22px; gap: 12px; }
 .subscribe-page .bubble { width: 96px; height: 96px; gap: 7px; }
 .subscribe-page .bubble-art { height: 30px; }
