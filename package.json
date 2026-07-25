@@ -16,6 +16,7 @@
     "@google/generative-ai": "^0.21.0",
     "@react-email/components": "^0.0.25",
     "@supabase/supabase-js": "^2.45.0",
+    "@tabler/icons-react": "^3.45.0",
     "geist": "^1.7.2",
     "inngest": "^3.22.0",
     "next": "^15.0.0",

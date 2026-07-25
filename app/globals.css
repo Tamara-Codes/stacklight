@@ -298,26 +298,48 @@ html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 /* Subscribe is a focused picker, not a long-form page. Keep the complete
    desktop selection flow within one viewport; smaller screens keep their
    natural document scroll so every vendor remains reachable. */
-.subscribe-page { padding-top: 32px; padding-bottom: 32px; }
+.subscribe-page { max-width: 1120px; padding-top: 32px; padding-bottom: 32px; }
 .subscribe-page .bubble-cloud { margin-top: 22px; gap: 12px; }
-.subscribe-page .bubble { width: 76px; height: 76px; gap: 5px; }
-.subscribe-page .bubble-art { height: 24px; }
-.subscribe-page .bubble-art img { width: 24px; height: 24px; }
-.subscribe-page .bubble-mono { font-size: 19px; }
-.subscribe-page .bubble-name { font-size: 9px; max-width: 66px; }
-.subscribe-page .bubble-check { top: 5px; right: 7px; font-size: 10px; }
+.subscribe-page .bubble { width: 96px; height: 96px; gap: 7px; }
+.subscribe-page .bubble-art { height: 30px; }
+.subscribe-page .bubble-art img { width: 30px; height: 30px; }
+.subscribe-page .bubble-mono { font-size: 23px; }
+.subscribe-page .bubble-name { font-size: 11px; max-width: 82px; }
+.subscribe-page .bubble-check { top: 7px; right: 9px; font-size: 12px; }
 .subscribe-page .btn.lg { padding: 12px 22px; }
 
 @media (min-width: 1024px) {
   .subscribe-page .bubble-cloud {
     display: grid;
-    grid-template-columns: repeat(10, 76px);
+    grid-template-columns: repeat(9, 96px);
+    gap: 8px;
     justify-content: center;
     max-width: none;
   }
-  .subscribe-page .bubble-float { width: 76px; }
+  .subscribe-page .bubble-float { width: 96px; }
   .subscribe-page > div:last-child { margin-top: 24px !important; }
 }
+
+@media (min-width: 1200px) {
+  .subscribe-page .bubble-cloud { grid-template-columns: repeat(10, 96px); gap: 12px; }
+}
+
+.subscribe-alerts { max-width: 460px; margin: 44px auto 0; text-align: left; }
+.subscribe-field { display: grid; gap: 8px; margin-top: 18px; color: var(--text); font-size: 14px; font-weight: 600; }
+.subscribe-field input { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--text); font: inherit; font-weight: 400; }
+.subscribe-field input:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 35%, transparent); outline-offset: 1px; }
+.subscribe-channel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.subscribe-channel { display: grid; align-content: start; gap: 14px; min-height: 132px; padding: 18px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--muted); cursor: pointer; font: inherit; text-align: left; transition: border-color .15s ease, background .15s ease, color .15s ease, transform .06s ease; }
+.subscribe-channel:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); color: var(--text); }
+.subscribe-channel:active { transform: translateY(1px); }
+.subscribe-channel:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.subscribe-channel.on { border-color: var(--accent); background: rgba(110, 168, 254, 0.12); color: var(--text); }
+.subscribe-channel-heading { display: flex; align-items: center; gap: 8px; color: var(--text); }
+.subscribe-channel-heading svg { color: var(--accent); flex: none; }
+.subscribe-channel-heading strong { font-size: 15px; }
+.subscribe-channel > span:last-child { font-size: 13px; line-height: 1.45; }
+.subscribe-alert-actions { display: flex; align-items: center; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+@media (max-width: 520px) { .subscribe-channel-grid { grid-template-columns: 1fr; } .subscribe-channel { min-height: auto; } }
 
 /* Authenticated app shell — header/nav that was missing entirely before. */
 .app-header { background: var(--panel); border-bottom: 1px solid var(--line); }

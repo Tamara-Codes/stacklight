@@ -12,15 +12,18 @@ import { randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/db/admin";
 import { buildWelcomeEmail } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
+import { isDiscordWebhookUrl } from "@/lib/discord/webhook";
 import { manageUrl, signUserId } from "@/lib/tokens";
 
 const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.tamara.rocks";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {
-  const { email, vendorIds } = (await req.json()) as {
+  const { email, vendorIds, instantEmail, discordWebhook } = (await req.json()) as {
     email?: string;
     vendorIds?: number[];
+    instantEmail?: boolean;
+    discordWebhook?: string;
   };
 
   const address = String(email ?? "").trim().toLowerCase();
@@ -40,6 +43,11 @@ export async function POST(req: NextRequest) {
   const validIds = (realVendors ?? []).map((v) => v.id);
   if (validIds.length === 0) {
     return NextResponse.json({ error: "Pick at least one tool." }, { status: 400 });
+  }
+
+  const webhookUrl = String(discordWebhook ?? "").trim();
+  if (webhookUrl && !isDiscordWebhookUrl(webhookUrl)) {
+    return NextResponse.json({ error: "That doesn't look like a Discord webhook URL." }, { status: 400 });
   }
 
   // Find or create the user by email. We never rotate an existing user's id
@@ -65,6 +73,19 @@ export async function POST(req: NextRequest) {
     .from("user_stacks")
     .insert(validIds.map((vendor_id) => ({ user_id: userId, vendor_id })));
 
+  // Initial instant-alert choices. The daily digest is always sent to the
+  // address above; these rows only enable the optional real-time red alerts.
+  if (instantEmail) {
+    await supabaseAdmin
+      .from("alert_channels")
+      .upsert({ user_id: userId, kind: "email", target: null }, { onConflict: "user_id,kind" });
+  }
+  if (webhookUrl) {
+    await supabaseAdmin
+      .from("alert_channels")
+      .upsert({ user_id: userId, kind: "discord", target: webhookUrl }, { onConflict: "user_id,kind" });
+  }
+
   // Welcome email with the manage link. Best-effort: a send failure shouldn't
   // lose the subscription they just made.
   try {
@@ -78,5 +99,5 @@ export async function POST(req: NextRequest) {
     console.error("welcome email failed:", e);
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, userId, token: signUserId(userId) });
 }
