@@ -58,7 +58,9 @@ export const dispatchDigests = inngest.createFunction(
 );
 
 export const sendUserDigest = inngest.createFunction(
-  { id: "send-user-digest", concurrency: { limit: 50 }, retries: 3 },
+  // Concurrency is capped by the Inngest plan (free = 5). Raise this to ~50 when
+  // the account is upgraded — the fan-out shape is what matters, not the number.
+  { id: "send-user-digest", concurrency: { limit: 5 }, retries: 3 },
   { event: "digest/user.requested" },
   async ({ event, step }) => {
     const { userId, date } = event.data as { userId: string; date: string };

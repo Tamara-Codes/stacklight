@@ -109,7 +109,8 @@ export const dispatchRedAlert = inngest.createFunction(
 );
 
 export const sendUserRedAlert = inngest.createFunction(
-  { id: "send-user-red-alert", concurrency: { limit: 25 }, retries: 3 },
+  // Capped by the Inngest plan (free = 5); raise alongside send-user-digest on upgrade.
+  { id: "send-user-red-alert", concurrency: { limit: 5 }, retries: 3 },
   { event: "alert/user.requested" },
   async ({ event, step }) => {
     const { userId, entryId, vendor, title, url, why } = event.data as {
