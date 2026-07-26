@@ -15,7 +15,7 @@ import { sendEmail } from "@/lib/email/client";
 import { isDiscordWebhookUrl } from "@/lib/discord/webhook";
 import { manageUrl, signUserId } from "@/lib/tokens";
 
-const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.tamara.rocks";
+const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.nosastra.co";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: NextRequest) {

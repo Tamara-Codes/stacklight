@@ -1,4 +1,4 @@
-// Frequent poller for STATUS feeds only. The daily ingest (06:00) covers
+// Half-hourly poller for STATUS feeds only. The daily ingest (06:00) covers
 // everything including changelogs/releases; this one exists so an outage or
 // breaking-change notice surfaces in minutes, not the next morning — reds are
 // only worth anything while they're happening.
@@ -15,10 +15,13 @@ import { syncVendorFeed, rateUnratedEntries } from "@/lib/feeds/sync";
 
 export const pollStatusFeeds = inngest.createFunction(
   { id: "poll-status-feeds" },
-  { cron: "*/10 * * * *" },
+  // Every 30 min, not 10: the sweep is the biggest fixed cost in Inngest steps
+  // (~4.3k/month at */10) and at v1 subscriber counts a red arriving in ≤30 min
+  // is still "instant" next to the daily digest. Tighten this as usage justifies.
+  { cron: "*/30 * * * *" },
   async ({ step }) => {
     // One step for the whole sweep (unlike the daily ingest's step-per-feed):
-    // at this cadence a failed feed just gets retried in 10 minutes, so
+    // at this cadence a failed feed just gets retried on the next sweep, so
     // fine-grained retry isolation isn't worth 40+ Inngest steps per run.
     const result = await step.run("sync-status-feeds", async () => {
       const { data: vendorRows } = await supabaseAdmin.from("vendors").select("id, slug");

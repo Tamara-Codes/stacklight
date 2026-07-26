@@ -58,7 +58,7 @@ Copy `.env.example` to `.env` and fill it in (Supabase, Gemini, Resend, Inngest,
 
 ## Deployment
 
-Deploys to `stacklight.tamara.rocks` on Vercel. Env vars live in the Vercel project; Inngest syncs the cron/event functions against the deployed `/api/inngest` endpoint.
+Deploys to `stacklight.nosastra.co` on Vercel. Env vars live in the Vercel project; Inngest syncs the cron/event functions against the deployed `/api/inngest` endpoint.
 
 ---
 

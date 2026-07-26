@@ -34,7 +34,10 @@ export interface VendorDef {
   feeds: FeedSource[];
 }
 
-export const VENDORS: VendorDef[] = [
+// Every vendor we've ever verified a feed for. Definitions live here permanently
+// so a re-verified feed URL is never lost — what ships is VENDORS (below), which
+// is this list minus PARKED_SLUGS. To re-enable a vendor, delete its slug there.
+const ALL_VENDORS: VendorDef[] = [
   // ===== AI / LLM =====
   {
     slug: "anthropic",
@@ -455,3 +458,35 @@ export const VENDORS: VendorDef[] = [
     feeds: [],
   },
 ];
+
+// Parked for v1 (2026-07-26). Deliberately NOT deleted: every feed URL above was
+// verified against the live parser, and re-researching them later is the expensive
+// part. Scope is a product decision — a focused picker tells us what people
+// actually want, and a smaller registry means fewer Gemini calls and less to
+// maintain while we validate. Re-enable by removing a slug from this set (and
+// flipping vendors.active in the DB — see db/schema.sql).
+//
+// Three reasons a vendor is here:
+//   1. NO FEED — can never produce an update, so offering it in the picker is a
+//      lie. Revisit once Firecrawl lands: xai, openrouter, exa, linkup, recallai,
+//      auth0, posthog, java.
+//   2. OUT OF SCOPE for v1's audience (AI-app builders on a modern JS/Python stack).
+//   3. VERSION-BUMP NOISE — release feeds whose entries are almost always
+//      "x.y.z released" rather than anything a developer must react to.
+const PARKED_SLUGS = new Set<string>([
+  // 1. no feed
+  "xai", "openrouter", "exa", "linkup", "recallai", "auth0", "posthog", "java",
+  // 2. out of scope for v1
+  "langchain", "langsmith", "e2b", "browseruse", "deepgram", "flyio",
+  "planetscale", "mongodb", "upstash", "twilio", "sendgrid", "brevo",
+  "datadog", "svix", "sentry",
+  // 3. version-bump noise
+  "deno", "bun", "prisma", "spring-boot",
+]);
+
+// What actually ships: polled by the ingest jobs, and the set the picker offers.
+export const VENDORS: VendorDef[] = ALL_VENDORS.filter((v) => !PARKED_SLUGS.has(v.slug));
+
+// Exported for the migration/back-office path that flips vendors.active — the DB
+// keeps rows (and their entries) for parked vendors, it just stops offering them.
+export const PARKED_VENDOR_SLUGS: string[] = [...PARKED_SLUGS];

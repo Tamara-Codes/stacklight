@@ -20,7 +20,7 @@ import { buildRedAlertEmail } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { unsubToken } from "@/lib/tokens";
 
-const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.tamara.rocks";
+const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.nosastra.co";
 
 export const dispatchRedAlert = inngest.createFunction(
   { id: "dispatch-red-alert" },
@@ -34,7 +34,7 @@ export const dispatchRedAlert = inngest.createFunction(
     const entry = await step.run("load-entry", async () => {
       const { data } = await supabaseAdmin
         .from("entries")
-        .select("severity, title, url, why, vendor_id, vendors(name)")
+        .select("severity, title, url, why, vendor_id, vendors(name, active)")
         .eq("id", entryId)
         .maybeSingle();
       // supabase-js can't infer the vendors(name) join without generated DB types.
@@ -44,10 +44,13 @@ export const dispatchRedAlert = inngest.createFunction(
         url: string | null;
         why: string | null;
         vendor_id: number;
-        vendors: { name: string } | null;
+        vendors: { name: string; active: boolean } | null;
       } | null;
     });
     if (!entry || entry.severity !== "red") return { skipped: "not-red" };
+    // A parked vendor must never page anyone, even off a rating made before it
+    // was parked.
+    if (!entry.vendors?.active) return { skipped: "vendor-parked" };
 
     // Recipients: start from alert_channels — the tiny set of users who turned
     // on at least one alert channel — then intersect with the vendor's

@@ -9,8 +9,14 @@ create table vendors (
   slug        text not null unique,          -- 'anthropic', 'vercel'
   name        text not null,
   homepage    text,
+  -- Is this vendor offered in the picker? Parked vendors (lib/feeds/sources.ts
+  -- PARKED_SLUGS) are flipped false rather than deleted: deleting cascades to
+  -- entries and user_stacks, so it would destroy history and people's picks.
+  active      boolean not null default true,
   created_at  timestamptz not null default now()
 );
+-- Idempotent for databases created before `active` existed.
+alter table vendors add column if not exists active boolean not null default true;
 
 -- Where each vendor's updates come from. One vendor can have several feeds
 -- (changelog RSS, status page, releases API). Config-driven, not hardcoded.

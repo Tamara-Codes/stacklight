@@ -33,7 +33,7 @@ There is no automated test suite — `scripts/test-ingest.ts` is a manual end-to
 The whole design assumes ~100k users and keeps cost flat as users grow. The expensive work — fetching an update and AI-rating it — happens **ONCE per entry, globally**. A user's digest is just a cheap, filtered read over the shared `entries` table. Two rules follow from this:
 
 - **Never rate per-user.** `rateEntry` (Gemini) is called only for entries where `severity is null`, in the ingest job. Don't move rating into the per-user digest path.
-- **The daily send is fan-out, not a loop.** `dispatchDigests` (cron) finds eligible users and emits one `digest/user.requested` event each; `sendUserDigest` runs once per event with capped concurrency (50) and retries (3). If one user's send fails, only that job retries. Don't replace this with a single for-loop over all users.
+- **The daily send is fan-out, not a loop.** `dispatchDigests` (cron) finds eligible users and emits one `digest/user.requested` event each; `sendUserDigest` runs once per event with capped concurrency (5 — the Inngest free-plan limit; raise on upgrade) and retries (3). If one user's send fails, only that job retries. Don't replace this with a single for-loop over all users.
 
 ## Idempotency (don't break these invariants)
 

@@ -123,10 +123,13 @@ export async function rateUnratedEntries(max = 500): Promise<RateResult> {
   let rated = 0;
   const redIds: number[] = [];
   while (rated < max) {
+    // Only ACTIVE vendors: a parked vendor's leftover entries must never cost a
+    // Gemini call. `!inner` makes the vendors join a filter, not just a lookup.
     const { data: unrated } = await supabaseAdmin
       .from("entries")
-      .select("id, title, body, url, vendors(name)")
+      .select("id, title, body, url, vendors!inner(name, active)")
       .is("severity", null)
+      .eq("vendors.active", true)
       .limit(Math.min(100, max - rated));
     if (!unrated?.length) break;
 
@@ -136,7 +139,7 @@ export async function rateUnratedEntries(max = 500): Promise<RateResult> {
       title: string;
       body: string | null;
       url: string | null;
-      vendors: { name: string } | null;
+      vendors: { name: string; active: boolean } | null;
     }[];
 
     for (const entry of rows) {

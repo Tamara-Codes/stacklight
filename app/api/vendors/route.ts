@@ -5,9 +5,12 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/db/admin";
 
 export async function GET() {
+  // Only ACTIVE vendors: parked ones (lib/feeds/sources.ts PARKED_SLUGS) aren't
+  // polled, so offering them would promise updates that never arrive.
   const { data } = await supabaseAdmin
     .from("vendors")
     .select("id, slug, name")
+    .eq("active", true)
     .order("name");
   return NextResponse.json({ vendors: data ?? [] });
 }

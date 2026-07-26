@@ -14,7 +14,7 @@ import { buildDigestEmail, type DigestEntry } from "@/lib/email/digest";
 import { sendEmail } from "@/lib/email/client";
 import { unsubToken } from "@/lib/tokens";
 
-const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.tamara.rocks";
+const BASE = process.env.PUBLIC_BASE_URL ?? "https://stacklight.nosastra.co";
 
 export const dispatchDigests = inngest.createFunction(
   { id: "dispatch-digests" },
@@ -91,9 +91,12 @@ export const sendUserDigest = inngest.createFunction(
       const vendorIds = (stack ?? []).map((s) => s.vendor_id);
       if (!user?.email || vendorIds.length === 0) return null;
 
+      // vendors!inner + active: a stack row kept from before a vendor was parked
+      // must not resurrect it in someone's digest. Parked = gone, everywhere.
       const { data: entries } = await supabaseAdmin
         .from("entries")
-        .select("id, severity, why, title, url, vendors(name)")
+        .select("id, severity, why, title, url, vendors!inner(name, active)")
+        .eq("vendors.active", true)
         .in("vendor_id", vendorIds)
         .in("severity", ["red", "yellow", "green"]) // excludes unrated (null) AND "skip"
         .gte("published_at", since)
@@ -106,7 +109,7 @@ export const sendUserDigest = inngest.createFunction(
         why: string;
         title: string;
         url: string | null;
-        vendors: { name: string } | null;
+        vendors: { name: string; active: boolean } | null;
       }[];
       const digestEntries: (DigestEntry & { id: number })[] = rows.map((e) => ({
         id: e.id,
